@@ -2,6 +2,8 @@ url: ~
 template:
   bootstrap: 5
   bslib:
-    bg: "#202123"
-    fg: "#B8BCC2"
-    primary: "#306cc9"
+    bg: "#FFFFFF"
+    fg: "#000000"
+    primary: "#4da598"
+navbar:
+  bg: primary
