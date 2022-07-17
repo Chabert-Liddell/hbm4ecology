@@ -1,0 +1,24 @@
+Package: hbayeseco
+Type: Package
+Title: Data, Help Function and Analysis for the Book Introduction to Hierarchical Bayesian Modeling for Ecological Data
+Version: 0.1.0
+Authors@R: c(
+    person(given = "Saint-Clair", family = "Chabert-Liddell",
+        email = "academic@chabert-liddell.com", role = c("aut", "cre"),
+        comment = c(ORCID = "0000-0001-5604-7308")),
+    person(given = "Éric", family = "Parent", role = "aut"),    
+    person(given = "Étienne", family = "Rivot", role = "aut")
+    )
+Description: This is the companion package for the book "Introduction to 
+    Hierarchical Bayesian Modeling for Ecological Data" (Parent and Rivot, 2012)
+    . The package contains the datasets used in the booked as well as some
+    helper functions for rstan and rjags. The analysis of the datasets are 
+    provided as vignette.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 2.10)
+RoxygenNote: 7.2.0
+Imports: 
+    magrittr
