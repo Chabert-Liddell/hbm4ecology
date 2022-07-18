@@ -1,0 +1,767 @@
+---
+title: "Hierarchical Stock Recruitment"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(hbayeseco)
+library(rstan)
+library(tidyverse)
+```
+
+
+Parent E. and Rivot E. - An introduction to Hierarchcial Modeling of Ecological Data Chapman et al. 2012
+
+Stan program for Hierarchical Stock-recruitment analysis (with covariates Latitude) Chapter 9 - section 9.3
+
+
+
+# Model without covariates
+
+Ricker model with lognormal errors and management related parametrization
+
+- $\log(R_{k,t}) = h_{k}^{*} + \log(\frac{S_{k,t}}{1-h^{*}{t}}) - \frac{h^{*}_{k}}{S^{*}_{k}}S_{k,t} + \epsilon_{k,t}$
+- $\epsilon_{k,t} \overset{iid}{\sim} Normal(0, \sigma_k^2)$
+
+### Defining priors for the model 
+
+- $h_k^* \sim Beta(1,1)$
+- $\tau = \sigma^{-2} \sim Gamma(p = 10^{-3},q = 10^{-3})$ with $\sigma_k = k$, $\forall k$
+
+With two different elicitation for $S^*_k$:
+
+A more refined gamma elicitation:
+
+- $\mu_{S^*} = 40 \text{eggs/$m^2$}$
+- $CV_{S^*} = 1$
+- $a = CV_{S^*}^{-2}$
+- $b = \mu_{S^*}^{-1}CV_{S^*}^{-2}$
+- $S_k^* \sim Gamma(a,b) \mathbf{1}_{S_k^* < 200}$
+
+A simple uniform:
+
+- $S_k^* \sim Uniform(0,200)$
+
+### Writing the model in stan
+
+```{r}
+hsr_model_stan <- "
+data {
+  int n_riv; // Number of rivers
+  int n_obs[n_riv]; // Number of observations by rivers
+  int n; // Total number of observations
+  int riv[n]; // River membership (indices k)
+  vector[n] S; // Stock data
+  vector[n] R; // Recruitment data
+}
+
+parameters {
+  vector<lower=0, upper=200>[n_riv] Sopt;
+  vector<lower=0, upper=1>[n_riv] hopt;
+  real<lower=0> tau;
+}
+
+transformed parameters {
+  vector<lower=0>[n_riv] alpha;
+  vector<lower=0>[n_riv] beta ;
+  real<lower=0> sigma;
+  // real Copt;
+  // real Ropt;
+  vector[n] LogR;
+  // real Slope;
+  
+  for (k in 1:n_riv) {
+    alpha[k] = exp(hopt[k])/(1-hopt[k]) ;  
+    beta[k] = hopt[k]/Sopt[k]     ;    
+  }
+  sigma = tau^-0.5        ;  
+  // Copt = hopt*Sopt/(1-hopt);
+  // Ropt = Sopt + Copt;
+  // Slope = exp(alpha);
+  for (t in 1:n) {
+    LogR[t] = log(S[t]) + log(alpha[riv[t]]) - beta[riv[t]]*S[t] ;  // LogR[t] is the logarithm of the Ricker function  
+  }
+}
+
+model {
+  tau ~ gamma(.001, .001) ; // Diffuse prior for the variance
+  for (k in 1:n_riv) {
+    hopt[k] ~ beta(1,1) ;   
+    Sopt[k] ~ uniform(0, 200) ;
+  }
+// 
+    log(R) ~ normal(LogR, sigma) ;
+}
+"
+```
+
+```{r}
+data("HsrAsalmon")
+# data <- list(
+# 
+# n_riv = 13, 
+# 
+# n_obs = c(12,14,12,9,12,7,13,13,11,12,6,8,10),
+# 
+# n = 139, 
+# 
+# riv = c(
+# 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+# 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
+# 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
+# 4, 4, 4, 4, 4, 4, 4, 4, 4, 
+# 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
+# 6, 6, 6, 6, 6, 6, 6, 
+# 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
+# 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 
+# 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 
+# 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 
+# 11, 11, 11, 11, 11, 11, 
+# 12, 12, 12, 12, 12, 12, 12, 12, 
+# 13, 13, 13, 13, 13, 13, 13, 13, 13, 13),
+# 
+# S = c(0.957, 0.501, 2.286, 1.481, 1.596, 2.679, 2.323, 1.645, 2.210, 3.764, 2.470, 1.391, 
+# 12.956, 12.084, 10.523, 2.762, 8.278, 6.943, 5.135, 1.540, 2.262, 3.437, 8.305, 5.231, 7.889, 1.621,
+# 5.785, 6.504, 7.325, 10.052, 11.969, 8.660, 5.192, 2.354, 2.494, 3.172, 2.887, 2.921, 
+# 2.399, 3.793, 0.989, 1.621, 1.538, 1.822, 3.872, 1.913, 2.364,
+# 4.059, 7.377, 8.705, 6.032, 6.159, 7.653, 3.477, 7.250, 4.134, 6.441, 6.062, 6.013,
+# 2.199, 1.844, 2.364, 1.395, 2.979, 2.388, 2.080, 
+# 1.384, 3.584, 5.665, 4.057, 5.441, 1.254, 2.886, 3.513, 3.040, 3.548, 2.661, 1.727, 1.833, 
+# 0.296, 1.284, 0.992, 0.366, 1.193, 1.496, 1.818, 1.258, 1.169, 2.813, 3.136, 1.189, 1.414, 
+# 3.914, 16.788, 9.091, 1.678, 5.970, 15.327, 11.944, 7.955, 13.640, 16.008, 24.593, 
+# 4.765, 2.467, 3.454, 9.036, 9.206, 3.540, 2.382, 4.680, 2.876, 1.021, 3.046, 5.428, 
+# 11.381, 11.425, 18.308, 14.920, 17.584, 17.733, 
+# 6.331, 5.269, 6.369, 4.913, 6.129, 5.782, 5.383, 2.376, 
+# 37.010, 37.303, 28.337, 16.790, 37.955, 42.157, 32.309, 34.869, 24.022, 31.268), 
+# 
+# R = c(2.647, 0.444, 1.801, 0.573, 0.356, 0.390, 3.598, 2.357, 2.026, 0.665, 0.834, 1.433,
+# 8.247, 1.328, 2.744, 4.511, 5.174, 0.846, 4.278, 1.237, 3.429, 4.491, 5.440, 2.797, 5.997, 0.442, 
+# 13.278, 13.266, 9.062, 5.269, 2.919, 3.467, 4.080, 3.757, 3.828, 4.397, 4.640, 5.370, 
+# 2.617, 3.141, 4.205, 3.655, 3.898, 3.333, 2.792, 3.877, 3.290, 
+# 15.226, 27.525, 8.615, 16.634, 13.926, 16.805, 17.668, 25.368, 12.232, 18.723, 16.516, 21.778, 
+# 5.114, 5.145, 4.207, 3.491, 3.412, 3.759, 4.248, 
+# 17.341, 6.301, 11.328, 14.334, 15.589, 19.808, 12.307, 9.313, 6.717, 10.268, 18.339, 5.982, 5.817, 
+# 3.727, 4.675, 5.681, 3.932, 3.653, 8.789, 9.800, 3.715, 4.419, 3.435, 2.991, 4.184, 2.309, 
+# 18.657, 47.897, 37.326, 24.859, 42.626, 50.024, 42.996, 62.642, 76.854, 26.009, 14.744,
+# 11.766, 3.594, 8.026, 6.119, 7.735, 7.152, 5.919, 9.419, 6.065, 4.016, 10.110, 4.438, 
+# 20.154, 20.791, 26.458, 19.724, 16.823, 21.693, 
+# 15.323, 13.202, 15.969, 17.781, 18.242, 16.253, 10.899, 5.724, 
+# 150.747, 108.681, 104.854, 110.264, 111.579, 139.799, 124.208, 85.049, 73.261, 71.534)
+# 
+# ) 
+```
+
+
+```{r}
+#options(mc.cores = parallel::detectCores())
+# Number iteration for the "warm up" phase
+n_warm <- 2500
+# Number iteration for inferences
+n_iter <- 5000
+n_thin <- 1
+# Number of chains
+n_chains <- 4
+
+#STAN_model_SRMargaree_Ricker_LogN_Management <- 
+#  STAN_model_SRMargaree_Ricker_LogN_Management.stan
+
+
+# ------------------------------------------------------------------------------------
+# HMC config.
+# ------------------------------------------------------------------------------------
+# Run model
+# ------------------------------------------------------------------------------------
+
+# Load/check model, load data and inits
+
+# model_code <- stanc(file = "./STAN_SRMargaree_Ricker_LogN_Management.stan")
+model_name <-"HSR_Ricker_LogN_Management"
+sm <- stan_model(model_code =  hsr_model_stan,
+                 model_name =  model_name
+)
+params<-c("Sopt","hopt","tau")
+# Inferences
+
+
+fit <- sampling(object = sm,
+                data = HsrAsalmon, 
+                pars = NA, #params,
+                chains = n_chains, 
+                iter = n_iter, 
+                warmup = n_warm, 
+                thin = n_thin, 
+                control = list("adapt_delta" = .85)
+                #control = list("max_treedepth" = 12)
+)
+
+stan_rhat(fit,pars = params )
+summary(fit)
+# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
+# 
+# plot(fit, plotfun = "hist", pars = params, include = TRUE)+ 
+#   ggtitle("Posterior distributions for main parameters")
+# pairs(x = fit, 
+#       pars = params
+#  )
+# print(fit)
+# plot(fit)
+# traceplot(fit, "lp__", inc_warmup=TRUE)
+# plot(fit, show_density = TRUE, ci_level = 0.5, fill_color = "purple")
+# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
+# plot(fit, plotfun = "rhat") + ggtitle("Example of adding title to plot")
+```
+
+```{r}
+ar <-  rstan::extract(fit, pars= "Sopt",  permuted=FALSE, inc_warmup=FALSE)
+df <- lapply(seq(n_chains), 
+              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
+                                                         chains = as_factor(eval(c)))) %>% 
+  bind_rows()
+
+df %>% pivot_longer(cols = starts_with("Sopt")) %>% 
+  ggplot() +
+  aes(y = log(value), group = name) +
+  geom_boxplot()
+
+```
+
+```{r}
+ar <-  rstan::extract(fit, pars= "hopt",  permuted=FALSE, inc_warmup=FALSE)
+df <- lapply(seq(n_chains), 
+              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
+                                                         chains = as_factor(eval(c)))) %>% 
+  bind_rows()
+
+df %>% pivot_longer(cols = starts_with("hopt"), values_to = "h*") %>% 
+  ggplot() +
+  aes(y = `h*`, group = name) +
+  geom_boxplot()
+
+```
+
+#### With Gamma prior for S
+
+```{r}
+hsr_model_indep_S_gamma_stan <- "
+data {
+  int n_riv; // Number of rivers
+  int n_obs[n_riv]; // Number of observations by rivers
+  int n; // Total number of observations
+  int riv[n]; // River membership (indices k)
+  vector[n] S; // Stock data
+  vector[n] R; // Recruitment data
+}
+
+parameters {
+  vector<lower=0, upper=200>[n_riv] Sopt;
+  vector<lower=0, upper=1>[n_riv] hopt;
+  real<lower=0> tau;
+}
+
+transformed parameters {
+  vector<lower=0>[n_riv] alpha;
+  vector<lower=0>[n_riv] beta ;
+  real<lower=0> sigma;
+  // real Copt;
+  // real Ropt;
+  vector[n] LogR;
+  // real Slope;
+  
+  for (k in 1:n_riv) {
+    alpha[k] = exp(hopt[k])/(1-hopt[k]) ;  
+    beta[k] = hopt[k]/Sopt[k]     ;    
+  }
+  sigma = tau^-0.5        ;  
+  // Copt = hopt*Sopt/(1-hopt);
+  // Ropt = Sopt + Copt;
+  // Slope = exp(alpha);
+  for (t in 1:n) {
+    LogR[t] = log(S[t]) + log(alpha[riv[t]]) - beta[riv[t]]*S[t] ;  // LogR[t] is the logarithm of the Ricker function  
+  }
+}
+
+model {
+  tau ~ gamma(.001, .001) ; // Diffuse prior for the variance
+  for (k in 1:n_riv) {
+    hopt[k] ~ beta(1,1) ;   
+    Sopt[k] ~ gamma(1, 1./1600) ;
+  }
+// 
+    log(R) ~ normal(LogR, sigma) ;
+}
+"
+```
+
+```{r}
+#options(mc.cores = parallel::detectCores())
+# Number iteration for the "warm up" phase
+n_warm <- 2500
+# Number iteration for inferences
+n_iter <- 5000
+n_thin <- 1
+# Number of chains
+n_chains <- 4
+model_name <-"HSR_Ricker_LogN_Management_S_gamma"
+sm <- stan_model(model_code =  hsr_model_indep_S_gamma_stan,
+                 model_name =  model_name
+)
+params<-c("Sopt","hopt","tau")
+# Inferences
+
+
+fit <- sampling(object = sm,
+                data = HsrAsalmon, 
+                pars = NA, #params,
+                chains = n_chains, 
+                iter = n_iter, 
+                warmup = n_warm, 
+                thin = n_thin,
+                control = list("adapt_delta" = .85)#max_treedepth" = 12)
+)
+
+ stan_rhat(fit,pars = params )
+# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
+# 
+# plot(fit, plotfun = "hist", pars = params, include = TRUE)+ 
+#   ggtitle("Posterior distributions for main parameters")
+# pairs(x = fit, 
+#       pars = params
+# )
+# print(fit)
+# plot(fit)
+# traceplot(fit, "lp__", inc_warmup=TRUE)
+# plot(fit, show_density = TRUE, ci_level = 0.5, fill_color = "purple")
+# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
+# plot(fit, plotfun = "rhat") + ggtitle("Example of adding title to plot")
+```
+
+```{r}
+
+ar <-  rstan::extract(fit, pars= "Sopt",  permuted=FALSE, inc_warmup=FALSE)
+df <- lapply(seq(n_chains), 
+              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
+                                                         chains = as_factor(eval(c)))) %>% 
+  bind_rows()
+
+df %>% 
+  pivot_longer(cols = starts_with("Sopt"), values_to = "Sopt") %>%
+  ggplot() +
+  aes(y = log(Sopt), group = name) +
+  geom_boxplot(fill = "grey80")  
+
+```
+
+```{r}
+ar <-  rstan::extract(fit, pars= "hopt",  permuted=FALSE, inc_warmup=FALSE)
+df <- lapply(seq(n_chains), 
+              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
+                                                         chains = as_factor(eval(c)))) %>% 
+  bind_rows()
+
+df %>% pivot_longer(cols = starts_with("hopt"), values_to = "h*") %>%
+  ggplot() +
+  aes(y = `h*`, group = name) +
+  geom_boxplot() +
+  geom_boxplot(fill = "grey80")  
+
+```
+
+### Hierarchical model with latitudinal covariates
+
+
+```{r}
+hsr_model_hier_S_gamma_stan <- "
+data {
+  int n_riv; // Number of rivers
+  int n_obs[n_riv]; // Number of observations by rivers
+  int n; // Total number of observations
+  int riv[n]; // River membership (indices k)
+  vector<lower=0>[n] S; // Stock data
+  vector<lower=0>[n] R; // Recruitment data
+  vector[n_riv] lat; //Latitude of rivers
+  int n_pred;
+  vector[n_pred] lat_pred;
+}
+
+transformed data {
+  vector[n_riv] lat_rescaled;
+//  real CV_S;
+//  real a;
+//  a = 1/(CV_S*CV_S);
+  lat_rescaled = lat-mean(lat);
+}
+
+parameters {
+  real<lower=0> tau;
+
+  real<lower=0, upper=20> CV_S;
+  real<lower=-5, upper=5> alpha;
+  real<lower=-50, upper=50> beta;
+  vector<lower=0, upper=200>[n_riv] Sopt;  
+  
+  
+  real<lower=-5, upper=5> delta;
+  real<lower=-50, upper=50> kappa;
+  real<lower=0> tau_h;
+  vector[n_riv] logit_h; // logit of hopt
+
+}
+
+transformed parameters {
+  
+  real<lower=0> sigma; // stdev for lognormal noise
+  
+//  vector[n_riv] log_mu_S; // log of the expected mean of Sopt
+  vector<lower=0>[n_riv] mu_S; // Expected mean of Sopt  
+  real<lower=0> a; // parameters of the gamma prior of Sopt
+  vector<lower=0>[n_riv] b; // parameters of the gamma prior of Sopt
+  
+  real<lower=0> sigma_h; // stdev for logit of h 
+  vector[n_riv] logit_mu_h; // logit of the expected mean of hopt
+  vector<lower=0, upper=1>[n_riv] hopt;
+  
+  vector[n] LogR;
+  
+  
+
+  sigma = tau^-0.5  ;
+  sigma_h = tau_h^-0.5 ;
+
+  for (k in 1:n_riv) {
+    mu_S[k] = exp(alpha * (lat[k]) + beta) ;
+//    mu_S[k] = exp(alpha * (lat_rescaled[k]) + beta) ;
+//    mu_S[k] = exp(log_mu_S[k]);
+    logit_mu_h[k] = delta * (lat[k]) + kappa ;
+//    logit_mu_h[k] = delta * (lat_rescaled[k]) + kappa ;
+  }
+  
+  a = 1/square(CV_S) ;
+  for (k in 1:n_riv) {
+    b[k] = 1/(mu_S[k]*square(CV_S)) ;
+  }  
+  hopt = inv_logit(logit_h) ;
+
+
+  for (t in 1:n) {
+    LogR[t] = hopt[riv[t]] + log(S[t]) - log(1 - hopt[riv[t]]) - hopt[riv[t]]/Sopt[riv[t]]*S[t] ;  // LogR[t] is the logarithm of the Ricker function  
+  }
+}
+
+model {
+//  alpha ~ uniform(-5, 5);
+//  beta ~ uniform(-50, 50);
+//  CV_S ~ uniform(0, 20);
+  
+//  delta ~ uniform(-5, 5);
+//  kappa ~ uniform(-50, 50);
+
+
+  tau ~ gamma(.001, .001) ; // Diffuse prior for the precision
+  tau_h ~ gamma(.001, .001) ; // Diffuse prior for the precision
+
+
+
+  for (k in 1:n_riv) {
+    logit_h[k] ~ normal(logit_mu_h[k], sigma_h);
+    Sopt[k] ~ gamma(a, b[k]) ; // T[0,200] ;
+  }
+
+  
+  log(R) ~ normal(LogR, sigma) ;
+}
+
+generated quantities {
+  real a_pred;
+  vector[n_pred] b_pred;
+  vector[n_pred] Sopt_pred;
+  vector[n_pred] logit_hopt_pred;
+  vector<lower=0,upper=1>[n_pred] hopt_pred;
+  // Posterior Predictive for new rivers with latitude lat_pred[p]
+  a_pred = 1/(CV_S*CV_S);
+  for ( p in 1 : n_pred ) {
+//    b_pred[p] = a/(exp(alpha * lat_pred[p] + beta - alpha * mean(lat)));
+    b_pred[p] = a_pred*(1/exp(alpha * lat_pred[p] + beta));
+    Sopt_pred[p] = gamma_rng(a_pred,b_pred[p]); //T[0,200];
+//    logit_hopt_pred[p] = normal_rng(exp(delta * lat_pred[p] + kappa - delta * mean(lat)), sigma_h);`
+    logit_hopt_pred[p] = normal_rng(delta * lat_pred[p] + kappa, sigma_h);
+    hopt_pred[p] = inv_logit(logit_hopt_pred[p]);
+  } // end loop on predictions p
+} 
+"
+```
+
+```{r}
+data_lat <- list(
+  lat = c(43.5, 48.5, 50.5, 53, 53.98515, 54.5, 55, 55, 55, 57, 57, 61, 64),
+  lat_pred = c(46, 52, 59, 63), 
+  n_pred = 4
+)
+
+data_hier <- c(HsrAsalmon, data_lat)
+```
+
+```{r}
+model_name_hier <-"HSR_Ricker_LogN_Management_S_gamma_hier"
+sm_hier <- stan_model(model_code =  hsr_model_hier_S_gamma_stan,
+                 model_name =  model_name_hier)
+params<-c("Sopt","hopt","tau")
+# Inferences
+
+
+fit_hier <- sampling(object = sm_hier,
+                data = HSrAsalmon, 
+                pars = NA, #params,
+                chains = n_chains,
+                # init = lapply(seq(4), function(x)
+                #   list(alpha = 0, beta = 0)),
+                iter = 5000, 
+                warmup = 2500, 
+                thin = n_thin,
+                control = list("adapt_delta"= .85)#list("max_treedepth" = 12)
+)
+
+stan_rhat(fit_hier,pars = params )
+traceplot(fit_hier, "lp__", inc_warmup=FALSE)
+pairs(fit_hier, pars = c("Sopt[1]", "hopt[1]"))
+# plot(fit_hier, plotfun = "trace", pars = params, inc_warmup = TRUE)
+# 
+# plot(fit_hier, plotfun = "hist", pars = params, include = TRUE)+ 
+#   ggtitle("Posterior distributions for main parameters")
+# pairs(x = fit_hier, 
+#       pars = params
+# )
+# print(fit_hier)
+# plot(fit_hier)
+
+# plot(fit_hier, show_density = TRUE, ci_level = 0.5, fill_color = "purple")
+# plot(fit_hier, plotfun = "trace", pars = params, inc_warmup = TRUE)
+# plot(fit_hier, plotfun = "rhat") + ggtitle("Example of adding title to plot")
+```
+
+### Results 
+
+```{r}
+names_ind <- c("Nivelle","Oir","Frome","Dee","Burrishoole","Lune","Bush",
+"Mourne","Faughan","Girnock Burn","North Esk","Laerdalselva","Ellidaar")
+
+names_pred <- c("Nivelle","new 45?","Oir","new 50?","Frome","Dee","Burrishoole","Lune","new 55?","Bush",
+"Mourne","Faughan","Girnock Burn","North Esk","new 60?","Laerdalselva","Ellidaar","new 65?")
+```
+
+
+Plotting Figure 9., Page 210
+
+```{r}
+Sopt_hier <- fit_hier %>% extract_longer() %>% 
+  filter(str_detect(parameter, "Sopt\\.")) %>% 
+  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  group_by(Site) %>% summarise(Sopt_med = median(value))%>% 
+  select(Sopt_med) %>% as_vector()
+```
+
+
+```{r}
+hopt_hier <- fit_hier %>% extract_longer() %>% 
+  filter(str_detect(parameter, "hopt\\.")) %>% 
+  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  group_by(Site) %>% summarise(hopt_med = median(value))%>% 
+  select(hopt_med) %>% as_vector()
+```
+
+
+```{r}
+Sopt_ind <- fit %>% extract_longer() %>% 
+  filter(str_detect(parameter, "Sopt\\.")) %>% 
+  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  group_by(Site) %>% summarise(Sopt_med = median(value)) %>% 
+  select(Sopt_med) %>% as_vector()
+```
+
+
+```{r}
+hopt_ind <- fit %>% extract_longer() %>% 
+  filter(str_detect(parameter, "hopt\\.")) %>% 
+  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  group_by(Site) %>% summarise(hopt_med = median(value)) %>% 
+  select(hopt_med) %>% as_vector()
+```
+
+
+```{r}
+max_S <- sapply(seq_along(Sopt_ind), function(k) max(HsrAsalmon$S[HsrAsalmon$riv == k]))
+Splot <- seq(0,100,length.out=1000)
+Rplot_ind <- lapply(seq_along(Sopt_ind),
+  function(k) {
+    tibble(S = Splot[1:ceiling(15*max_S[k])],
+           river = as_factor(names_ind[k]),
+           R = exp( log(Splot[1:ceiling(15*max_S[k])]) + hopt_ind[k] - 
+                     log(1-hopt_ind[k]) - (hopt_ind[k]/Sopt_ind[k])*Splot[1:ceiling(15*max_S[k])] ))
+    })%>% 
+  bind_rows()
+```
+
+
+```{r}
+Rplot_hier <- lapply(seq_along(Sopt_hier),
+  function(k) {
+    tibble(S = Splot[1:ceiling(15*max_S[k])],
+           river = as_factor(names_ind[k]),
+           R = exp( log(Splot[1:ceiling(15*max_S[k])]) + hopt_hier[k] - 
+                     log(1-hopt_hier[k]) - (hopt_hier[k]/Sopt_hier[k])*Splot[1:ceiling(15*max_S[k])] ))
+    })%>% 
+  bind_rows()
+
+
+
+# df_Rplot_ind <- Rplot_ind %>% as_tibble() %>% 
+#   mutate(S = Splot) %>% 
+#   pivot_longer(cols = -S, names_to = "river", values_to = "R") %>%
+#   mutate(river = as.numeric(str_sub(river, 2))) %>% 
+#   mutate(river = factor(names_ind[river], levels = names_ind ))
+# 
+# df_Rplot_hier <- Rplot_hier %>% as_tibble() %>% 
+#   mutate(S = Splot) %>% 
+#   pivot_longer(cols = -S, names_to = "river", values_to = "R") %>%
+#   mutate(river = as.numeric(str_sub(river, 2))) %>% 
+#   mutate(river = factor(names_ind[river], levels = names_ind )) 
+
+  
+
+# df_Rplot_hier %>% group_by(river) %>% 
+#   mutate(max_S = data$max_S)
+```
+
+
+```{r}
+tibble(R = HsrAsalmon$R, S = HsrAsalmon$S, 
+       river = factor(names_ind[HsrAsalmon$riv], levels = names_ind)) %>% 
+  ggplot() +
+  aes(x = S, y = R) +
+  geom_point() +
+  facet_wrap(~ river, scales = "free") +
+  geom_line(data = Rplot_hier, size = 1) + 
+  geom_line(data = Rplot_ind, size = 1, linetype = "dashed") +
+  theme_classic(base_size = 15L) #+
+#  scale_x_continuous(limits = )
+```
+
+
+```{r}
+fit_hier_l <- extract_longer(fit_hier) %>% mutate(model = "hierarchical")
+fit_ind_l <- extract_longer(fit) %>%  mutate(model = "independent")
+
+fit_l <- bind_rows(fit_hier_l, fit_ind_l)
+
+fit_l %>% 
+  filter(str_detect(parameter, "Sopt\\.")) %>%
+  rename("S*" = value) %>% 
+  mutate(Site = as_factor(str_sub(parameter, 6))) %>%  # 6 = length("Sopt.") + 1
+  ggplot() +
+  aes(x = Site, y = log(`S*`), fill = model ) +
+  geom_boxplot(outlier.shape = NA, outlier.size = .25) +
+  scale_x_discrete(labels = names_ind, guide = guide_axis(angle = 90)) +
+  ylim(c(-3,6)) +
+  scale_fill_manual(values = c("gray50", "gray90")) +
+  ylab("log(S*)") +
+  theme_classic(base_size = 15L)
+```
+
+
+```{r}
+fit_l %>% 
+  filter(str_detect(parameter, "hopt\\.")) %>%
+  rename("h*" = value) %>% 
+  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  ggplot() +
+  aes(x = Site, fill = model, y = `h*`) +
+  geom_boxplot(outlier.shape = NA,outlier.size = .25) +
+  scale_x_discrete(labels = names_ind, guide = guide_axis(angle = 90)) +
+  scale_fill_manual(values = c("gray50", "gray90"))+
+  theme_classic(base_size = 15L)
+```
+
+
+Plotting marginal posterior probability shapes of the parameters $\alpha$, $\beta$, $\delta$, $\kappa$, $\sigma$, $\tau_{h*}$ (Fig. 9.12 page 216)
+
+```{r}
+fit_hier_l %>% 
+  filter(parameter  %in% c("alpha", "beta", "delta", "kappa", "sigma", "sigma_h")) %>% 
+  ggplot() + aes(x = value) +
+  geom_density(adjust = 2) +
+  facet_wrap(~ parameter, ncol = 2, scales = "free") +
+  theme_classic(base_size = 15L) 
+```
+
+Marginal posterior distributions and posterior predictive of $\log(S*)$ for the hierarhical model (fig. 9.13 page 217)
+
+```{r}
+reg_param <- fit_hier %>% extract_wider() %>% select(alpha, beta) %>% 
+  summarise(med_a = median(alpha), med_b = median(beta))
+
+fit_data <- fit_hier_l %>% 
+  filter(str_detect(parameter, "Sopt\\.")) %>%
+  rename("S*" = value) %>% 
+  mutate(id = as.factor(str_sub(parameter, 6)),
+    Latitude = data_hier$lat[as.numeric(str_sub(parameter, 6))],
+         type = "data") 
+
+fit_pred <- fit_hier_l %>% 
+  filter(str_detect(parameter, "Sopt_")) %>%
+  rename("S*" = value) %>% 
+  mutate(id = as.factor(str_sub(parameter, 6)),
+    Latitude = data_hier$lat_pred[as.numeric(str_sub(parameter, 11))],
+         type = "pred") 
+
+fit_data %>% bind_rows(fit_pred) %>% 
+  ggplot() +
+  aes(x = Latitude, group = id,  y = log(`S*`), fill = type) +
+  geom_boxplot(outlier.shape = NA,outlier.size = .25, varwidth = FALSE) +
+#  scale_x_discrete(labels = names_ind, guide = guide_axis(angle = 90)) +
+  scale_fill_manual(values = c("gray90", "gray50")) +
+  geom_abline(slope = reg_param$med_a, intercept = reg_param$med_b) + #-reg_param$med_a*mean(data_hier$lat)) +
+  ylim(c(-2,5)) +
+  ylab("log(S*)") +
+  theme_classic(base_size = 15L)
+```
+
+Marginal posterior distributions and posterior predictive of $h*$ for the hierarchical model (fig. 9.14 page 218)
+
+```{r}
+reg_param <- fit_hier %>% extract_wider() %>% select(delta, kappa) %>% 
+  summarise(med_d = median(delta), med_k = median(kappa))
+
+fit_data <- fit_hier_l %>% 
+  filter(str_detect(parameter, "^hopt\\.")) %>% # detect hopt. without logit_hopt.
+  rename("h*" = value) %>% 
+  mutate(id = as.factor(str_sub(parameter, 6)),
+    Latitude = data_hier$lat[as.numeric(str_sub(parameter, 6))],
+         type = "data") 
+
+fit_pred <- fit_hier_l %>% 
+  filter(str_detect(parameter, "^hopt_")) %>%
+  rename("h*" = value) %>% 
+  mutate(id = as.factor(str_sub(parameter, 6)),
+    Latitude = data_hier$lat_pred[as.numeric(str_sub(parameter, 11))],
+         type = "pred") 
+
+fit_data %>% bind_rows(fit_pred) %>% 
+  ggplot() +
+  aes(x = Latitude, group = id,  y = `h*`, fill = type) +
+  geom_boxplot(outlier.shape = NA,outlier.size = .25, varwidth = FALSE) +
+#  scale_x_discrete(labels = names_ind, guide = guide_axis(angle = 90)) +
+  scale_fill_manual(values = c("gray90", "gray50")) +
+  annotate(x = seq(42, 65, .1), 
+           y = 1/(1+exp(-reg_param$med_d*seq(42, 65, .1) -reg_param$med_k)),
+           geom = "line") +
+  # geom_abline(slope = reg_param$med_d, 
+  #             intercept = reg_param$med_k) + # -reg_param$med_d*mean(data_hier$lat)) +
+  ylim(c(0,1)) +
+#  ylab("log(S*)") +
+  theme_classic(base_size = 15L, base_rect_size = 1)
+```

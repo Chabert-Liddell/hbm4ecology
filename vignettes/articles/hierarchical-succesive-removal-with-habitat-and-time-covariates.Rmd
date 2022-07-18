@@ -1,0 +1,15 @@
+---
+title: "Hierarchical Model for Successive Removal Data
+                     with Habitat and Time Covariates"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(hbayeseco)
+```

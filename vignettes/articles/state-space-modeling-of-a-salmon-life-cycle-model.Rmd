@@ -1,0 +1,14 @@
+---
+title: "State-space Modeling of A. Salmon Life Cycle Model"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(hbayeseco)
+```

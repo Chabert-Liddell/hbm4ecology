@@ -1,0 +1,14 @@
+---
+title: "Hierarchical Stock Recruitment Analysis"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(hbayeseco)
+```

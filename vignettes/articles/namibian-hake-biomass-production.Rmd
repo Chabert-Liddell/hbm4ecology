@@ -1,0 +1,437 @@
+---
+title: "Biomass Production Model: The Namibian Hake Fishery"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(hbayeseco)
+library(rstan)
+library(tidyverse)
+library(GGally)
+library(posterior)
+library(bayesplot)
+```
+
+## State-space modeling of a biomass production model
+
+#### Process equation for the underlying dynamics of the biomass
+
+- $\frac{\mbox{d}B_t}{\mbox{d}t} = h(B_t)$
+- $h(B_t) = r\times B_t \times (1-\frac{B_t}{K})$ the production function
+- $r \sim Uniform(0.01, 3)$ is the population intrinsic growth
+- $K \sim Uniform(100, 15000)$ the carrying capacity
+
+$h(B_t)$ is high when $B_t \approx 0$ and is null when $B_t = K$
+
+Introducing the observed harvest between time $t$ and $t+1$,  $c_t$ and a log normal random noise:
+
+- $B_{t+1} = (B_t + h(B_t) - c_t)\times e^{\epsilon_{t+1}}$
+- $\epsilon_{t+1} \sim Normal(0, \sigma^2_p)$, the environmental noise
+- $\sigma^2_p = \sigma^2$, with $\log(\sigma^2) \sim Uniform(-20,20)$
+- with $B_1 = K e^{\epsilon_1}$
+
+#### Observation equation to link the data to the hidden process
+
+- $i_t = q \times B_t \times e^{\omega_t}$ the relative abundance index
+- $q$ such that $log(q) \sim Uniform (-20, 20)$ the catchability parameter
+- $\omega_t \sim Normal(0, \sigma_o^2)$ the observation noise
+- $\sigma^2_o = \sigma^2$, with $\log(\sigma^2) \sim Uniform(-20,20)$
+
+#### In state-space modeling notation:
+
+\[
+\begin{cases}
+[Z_{t+1} | Z_t, \theta_1] \\
+[y_t | Z_t, \theta_2]
+\end{cases}
+\]
+where
+
+- $Z_t = B_t$
+- $y_t = i_t$
+- $\theta_1 = \{r, K, \sigma_p \}$
+- $\theta_2 = \{q, \sigma_o \}$
+
+
+### Writing the model in Stan
+
+```{r stan-model}
+stan_model_biomprod <- "
+data {
+  int N;
+  int Year[N];
+  vector<lower=0>[N] C;
+  vector<lower=0>[N-1] I;
+  int NF;
+}
+
+parameters {
+  real<lower=0> r;
+  real<lower=100, upper=15000> K;
+  real<lower=-20, upper=20> log_q;
+  real<lower=-20, upper=20> log_sig2;
+  vector<lower=0>[N] P; //B_t/K
+}
+
+transformed parameters {
+  real q;
+  real sig;
+  vector<lower=0>[N] B;
+  
+  q = exp(log_q);
+  sig = sqrt(exp(log_sig2));
+  B = K*P;
+}
+
+model {
+  vector[N-1] h_P;
+
+  P[1] ~ lognormal(0, sig);
+  for (t in 1:(N-1)) {
+      h_P[t] = r * K * P[t] * (1 - P[t]);
+      P[t+1] ~ lognormal(log(P[t] + h_P[t]/K - C[t]/K), sig);
+      I[t] ~ lognormal(log(q*K*P[t+1]), sig);
+  }
+}
+
+generated quantities {
+  // Abundance prediction
+  vector[N] I_pred;
+  vector[NF] B_pred100;
+  vector[NF] B_pred500;
+  
+  for (t in 1:N) {
+    I_pred[t] = lognormal_rng(log(q*K*P[t]), sig);
+  }
+  // Forecasting the biomass
+
+  B_pred100[1] = (B[N] + r*B[N]*(1-B[N]/K) - 100) * lognormal_rng(0, sig);
+  B_pred500[1] = (B[N] + r*B[N]*(1-B[N]/K) - 500)* lognormal_rng(0, sig);
+  for (t in 1:(NF-1)) {
+  B_pred100[t+1] = (B_pred100[t] + r*B_pred100[t]*(1-B_pred100[t]/K) - 100) * lognormal_rng(0, sig);
+  B_pred500[t+1] = (B_pred500[t] + r*B_pred500[t]*(1-B_pred500[t]/K) - 500) * lognormal_rng(0, sig);
+  }
+} 
+
+"
+```
+
+```{r data}
+# dat <- read.table("Chap_11_1_SSM_BiomProd_NamibianHake/data_table.txt", 
+#                   header = TRUE)
+# dat_list <- list(N = nrow(dat),
+#                  NF = 5,
+#                  Year = dat$Year,
+#                  C = dat$C,
+#                  I = dat$I[2:length(dat$I)])
+data(BioprodNamibianHake, package = "hbayeseco")
+dat_list <- BioprodNamibianHake
+dat_list$I <- BioprodNamibianHake$I[2:25]
+dat_list$NF <- 5
+```
+
+```{r fit-model}
+model_name <-"BiomProd_NamibianHake"
+sm_hier <- stan_model(model_code =  stan_model_biomprod,
+                 model_name =  model_name)
+
+fit_hier <- sampling(object = sm_hier,
+                data = dat_list, 
+                pars = NA, #params,
+                chains = 4,
+                init = lapply(seq(4), function(x)
+                   list(P = rep(.5, 25))),
+                iter = 4000, 
+                warmup = 2000, 
+                thin = 1,
+                control = list("adapt_delta" = .9)#"max_treedepth" = 12)
+)
+```
+
+
+```{r diagnostic-plot}
+pars = c("r", "K", "q", "sig")
+pairs(fit_hier, pars = c("r", "K", "q", "sig") )
+traceplot(fit_hier, pars)
+stan_rhat(fit_hier)
+mcmc_trace(fit_hier, pars = pars)
+rhat(fit_hier, pars = pars)
+```
+```{r}
+pairs(fit_hier, pars = pars)
+```
+
+
+## Analysis 
+
+```{r analysis}
+df_w <- extract_wider(fit_hier)
+df_l <- extract_longer(fit_hier)
+
+```
+
+```{r}
+df_w %>% 
+  mutate(sig2 = sig * sig,
+         B_MSY = K/2,
+         C_MSY = r*K/4) %>% 
+  select(r, K, q, sig2, B_MSY, C_MSY) %>% 
+  pivot_longer(cols = everything(), names_to = "parameter") %>% 
+  group_by(parameter) %>% 
+#  filter(parameter %in% c("r", "K", "q", "sig")) %>% 
+  summarise(Mean = mean(value),
+            Sd = sd(value),
+            `q.025` = quantile(value, .025),
+            Median = median(value),
+            `q.975` = quantile(value, .975)) %>% 
+  knitr::kable(digits = 5)
+```
+
+- $B_{MSY} = \arg \max_{B} h(B) = K/2$
+- $C_{MSY} = g(B_{MSY}) = rK/4$ 
+
+```{r}
+df_w %>% 
+  mutate(C_MSY = r*K/4) %>% 
+  ggpairs(c("r" , "K", "q", "C_MSY"))
+```
+
+```{r}
+df_l %>% 
+  filter(str_detect(parameter, "I_pred")) %>% 
+  mutate(
+    id = as.numeric(str_sub(parameter, str_length("I_pred.")+1)),
+    Year = BioprodNamibianHake$Year[id])  %>% 
+  ggplot(aes(x = Year, y = value, group = Year)) +
+  geom_boxplot(outlier.shape = NA) +
+  annotate("line", x = BioprodNamibianHake$Year, y = BioprodNamibianHake$I) +
+#  geom_line(data = dat, mapping = aes(y = I)) +
+  ylim(c(0,2)) +
+  ylab("Abundance indices") +
+  scale_x_continuous(breaks = BioprodNamibianHake$Year,
+                     labels = BioprodNamibianHake$Year, 
+                     guide = guide_axis(angle = 90)) +
+  theme_classic(base_size = 15)
+  
+```
+
+Forecasting the biomass for years 1989 to 1993
+```{r}
+df_100 <- df_l %>% 
+  filter(str_detect(parameter, "B_pred100\\.")) %>% 
+  mutate(
+    id = as.numeric(str_sub(parameter, str_length("B_pred100.")+1)),
+    Year = seq(1989, 1993)[id], 
+    data_type = "Pred100")    
+
+df_500 <- df_l %>% 
+  filter(str_detect(parameter, "B_pred500\\.")) %>% 
+  mutate(
+    id = as.numeric(str_sub(parameter, str_length("B_pred500.")+1)),
+    Year = seq(1989, 1993)[id], 
+    data_type = "Pred500")    
+
+df_l %>%
+  filter(str_detect(parameter, "B\\.")) %>%
+  mutate(
+    id = as.numeric(str_sub(parameter, str_length("B.")+1)),
+    Year = BioprodNamibianHake$Year[id],
+    data_type = "data")  %>%
+  bind_rows(df_100, df_500) %>% 
+  ggplot(aes(x = as_factor(Year), y = value)) +
+  geom_boxplot(aes(fill = as_factor(data_type)),outlier.shape = NA, show.legend = FALSE) +
+  ylim(c(0,10000)) +
+  ylab("Biomass (x 1000 tons)") +
+  xlab("Years") +
+  scale_x_discrete( guide = guide_axis(angle = 90)) +
+  scale_fill_manual(values = c("white", "gray90", "gray50"))+
+  theme_classic(base_size = 15)
+```
+
+
+### Comparing Schaefer-type versus Fox-type prodcution function
+
+Recall that Schaefer type production function is given by:
+\[ h(B_t) = r \times B_t \times (1-\frac{B_t}{K}) \],
+with its associated fisheries management points:
+\begin{cases}
+C_{MSY} = \frac{r \times K}{4} \\
+B_{MSY} = \frac{K}{2}
+\end{cases}
+
+The value of the Fox model are as follows:
+\[ $h(B_t) = r \times B_t \times (1-\frac{\log(B_t)}{\log(K)}) \],
+with its associated fisheries management points:
+\begin{cases}
+C_{MSY} = \frac{r \times K \times e^{-1}}{\log(K)} \\
+B_{MSY} = K \times e^{-1}
+\end{cases}
+
+
+```{r stan-model-fox}
+stan_model_fox <- "
+data {
+  int N;
+  int Year[N];
+  vector<lower=0>[N] C;
+  vector<lower=0>[N-1] I;
+  int NF;
+}
+
+parameters {
+  real<lower=0> r;
+  real<lower=100, upper=15000> K;
+  real<lower=-20, upper=20> log_q;
+  real<lower=-20, upper=20> log_sig2;
+
+  vector<lower=0>[N] P; //B_t/K
+}
+
+transformed parameters {
+  real q;
+  real sig;
+  vector<lower=0>[N] B;
+  
+  q = exp(log_q);
+  sig = sqrt(exp(log_sig2));
+  B = K*P;
+}
+
+model {
+  vector[N-1] h_P;
+
+  P[1] ~ lognormal(0, sig);
+  for (t in 1:(N-1)) {
+      h_P[t] = r * K * P[t] * (1 - log(K*P[t])/log(K));
+      P[t+1] ~ lognormal(log(P[t] + h_P[t]/K - C[t]/K), sig);
+      I[t] ~ lognormal(log_q+log(K*P[t+1]), sig);
+  }
+}
+
+generated quantities {
+  // Abundance prediction
+  vector[N] I_pred;
+  vector[NF] B_pred100;
+  vector[NF] B_pred500;
+  
+  for (t in 1:N) {
+    I_pred[t] = lognormal_rng(log(q*B[t]), sig);
+  }
+  // Forecasting the biomass
+
+  B_pred100[1] = (B[N] + r*B[N]*(1-log(B[N])/log(K)) - 100) * exp(normal_rng(0, sig));
+  B_pred500[1] = (B[N] + r*B[N]*(1-log(B[N])/log(K)) - 500)* exp(normal_rng(0, sig));
+  for (t in 1:(NF-1)) {
+  B_pred100[t+1] = (B_pred100[t] + r*B_pred100[t]*(1-log(B_pred100[t])/log(K)) - 100) * exp(normal_rng(0, sig));
+  B_pred500[t+1] = (B_pred500[t] + r*B_pred500[t]*(1-log(B_pred500[t])/log(K)) - 500) * exp(normal_rng(0, sig));
+  }
+} 
+
+"
+```
+
+
+```{r fit-model-fox}
+model_name <-"BiomProd_NamibianHake_fox"
+sm_fox <- stan_model(model_code =  stan_model_fox,
+                 model_name =  model_name)
+
+fit_fox <- sampling(object = sm_fox,
+                data = dat_list, 
+                pars = NA, #params,
+                chains = 4,
+                 init = lapply(seq(4), function(x)
+                   list(K = 5000, r = 0.3, P = rep(.5, 25))),
+                iter = 5000, 
+                warmup = 2500, 
+                thin = 1#,
+              #  control = list("max_treedepth" = 12)
+)
+```
+
+```{r}
+pars = c("q", "K", "r", "sig")
+stan_rhat(fit_fox)
+pairs(fit_fox, pars = pars)
+```
+
+
+```{r compare}
+df_l_fox <- extract_longer(fit_fox) %>% 
+  mutate(model = "Fox")
+
+df_100_fox <- df_l_fox %>% 
+  filter(str_detect(parameter, "B_pred100\\.")) %>% 
+  mutate(
+    id = as.numeric(str_sub(parameter, str_length("B_pred100.")+1)),
+    Year = seq(1989, 1993)[id], 
+    data_type = "Pred100")  
+
+df_l %>% mutate(model = "Schaefer") %>% 
+  bind_rows(df_l_fox) %>% 
+    filter(str_detect(parameter, "B\\.")) %>%
+  mutate(
+    id = as.numeric(str_sub(parameter, str_length("B.")+1)),
+    Year = BioprodNamibianHake$Year[id],
+    data_type = "data")  %>%
+  bind_rows(df_100 %>%  mutate(model = "Schaefer"), df_100_fox) %>% 
+  ggplot(aes(x = as_factor(Year), y = value)) +
+  geom_boxplot(aes(fill = model),outlier.shape = NA) +
+  geom_vline(xintercept = 25.5, linetype = "dashed") +
+  ylim(c(0,10000)) +
+  ylab("Biomass (x 1000 tons)") + xlab("Years") +
+  scale_x_discrete( guide = guide_axis(angle = 90)) +
+  scale_fill_manual(values = c("gray90", "gray50"))+
+  theme_classic(base_size = 15)
+```
+
+```{r}
+df_w %>% mutate(C_MSY = r*K/4,
+                Model = "Schaefer") %>% 
+  bind_rows(extract_wider(fit_fox) %>% 
+              mutate(C_MSY = r*K*exp(-1)/log(K),
+                     Model = "Fox")) %>% 
+  ggplot(aes(x = C_MSY, linetype = Model)) +
+  geom_density(adjust = 2) +
+  theme_classic(base_size = 15)  
+```
+
+```{r}
+df_w %>% mutate(B_MSY = K/2,
+                Model = "Schaefer") %>% 
+  bind_rows(extract_wider(fit_fox) %>% 
+              mutate(B_MSY = K*exp(-1),
+                     Model = "Fox")) %>% 
+  ggplot(aes(x = B_MSY, linetype = Model)) +
+  geom_density(adjust = 2) +
+  theme_classic(base_size = 15)  
+```
+
+We now look at the chance of the biomass level to be under the Maximum Sustainable Yields biomass. Under the Schaefer production model:
+
+```{r}
+df_w %>% mutate(B_MSY = K/2) %>% 
+  mutate(Depletion_100 = B_pred100.5 < B_MSY,
+         Depletion_500 = B_pred500.5 < B_MSY) %>% 
+  summarise(`Depletion (100K scenario)` = mean(Depletion_100),
+            `Depletion (500K scenario)` = mean(Depletion_500)) %>% 
+  knitr::kable()
+```
+
+Under the Fox production model:
+
+```{r}
+fit_fox %>% extract_wider() %>% 
+  mutate(B_MSY = K*exp(-1)) %>% 
+  mutate(Depletion_100 = B_pred100.5 < B_MSY,
+         Depletion_500 = B_pred500.5 < B_MSY) %>% 
+  summarise(`Depletion (100K scenario)` = mean(Depletion_100, na.rm = TRUE),
+            `Depletion (500K scenario)` = mean(Depletion_500, na.rm = TRUE)) %>% 
+  knitr::kable()
+```
