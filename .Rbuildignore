@@ -6,3 +6,4 @@
 ^pkgdown$
 ^vignettes/articles$
 ^README\.Rmd$
+^\.github$
