@@ -10,7 +10,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(hbayeseco)
+library(hbm4ecology)
 library(rstan)
 library(tidyverse)
 library(GGally)
@@ -130,7 +130,7 @@ generated quantities {
 #                  Year = dat$Year,
 #                  C = dat$C,
 #                  I = dat$I[2:length(dat$I)])
-data(BioprodNamibianHake, package = "hbayeseco")
+data(BioprodNamibianHake, package = "hbm4ecology")
 dat_list <- BioprodNamibianHake
 dat_list$I <- BioprodNamibianHake$I[2:25]
 dat_list$NF <- 5

@@ -10,7 +10,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(hbayeseco)
+library(hbm4ecology)
 library(rstan)
 library(tidyverse)
 ```

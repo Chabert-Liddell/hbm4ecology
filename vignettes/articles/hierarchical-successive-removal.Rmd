@@ -10,7 +10,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, message=FALSE}
-library(hbayeseco)
+library(hbm4ecology)
 library(rjags)
 library(tidyverse)
 library(bayesplot)
