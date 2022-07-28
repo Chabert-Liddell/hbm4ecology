@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-## Data, Help Function and Analysis for the Book Introduction to Hierarchical Bayesian Modeling for Ecological Data
+### Data, Help Function and Analysis for the Book Introduction to Hierarchical Bayesian Modeling for Ecological Data
 
 hbm4ecology is the companion R package for the book "Introduction to 
     Hierarchical Bayesian Modeling for Ecological Data" (Parent and Rivot, 2012)

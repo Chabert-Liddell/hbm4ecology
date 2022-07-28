@@ -11,9 +11,16 @@ usethis::use_github_pages()
 usethis::use_github_action("pkgdown")
 pkgdown::build_site()
 pkgdown::build_articles()
+
+devtools::build_readme()
+pkgdown::build_home()
 pkgdown::build_home_index(); pkgdown::init_site();pkgdown::preview_site()
 
+
+
 #
+
+
 # usethis::use_article(name = "namibian-hake-biomass-production",
 #                      title = "Biomass Production Model: The Namibian Hake Fishery")
 # usethis::use_article(name = "state-space-modeling-of-a-salmon-life-cycle-model",
@@ -32,6 +39,6 @@ pkgdown::build_home_index(); pkgdown::init_site();pkgdown::preview_site()
 #                      title = "Hierarchical Model for Successive Removal Data
 #                      with Habitat and Time Covariates")
 
-hexSticker::sticker(imgurl, package="hbm4ecology", p_size=19, s_x=1, s_y=.8, s_width= .69,
+hexSticker::sticker(imgurl, package="hbm4ecology", p_size=20, s_x=1, s_y=.8, s_width= .69,
         h_fill = "#4da598", h_color = "#000000",
         filename="inst/figures/logo.png")

@@ -1,10 +1,14 @@
 ---
 title: "Biomass Production Model: The Namibian Hake Fishery"
+subtitle: "Chapter 11.2"
+bibliography: references.bib
+link-citations: TRUE
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
+  out.width = "300px",
   comment = "#>"
 )
 ```
@@ -17,6 +21,60 @@ library(GGally)
 library(posterior)
 library(bayesplot)
 ```
+
+
+## The Namibian hake fishery
+
+
+Let us consider as a first example the data from the Namibian hake fishery.
+Two hake species (*Merlucius capensis* and *Merlucius paradoxus*)
+are targeted by this fishery. The data analyzed here concern the fishery
+operating in zones 1.3 and 1.4 of the International Commission for the
+South-East Atlantic Fisheries (ICSEAF) from 1965 to 1988.
+
+![Location of the ICSEAF fishery areas 1.3 and 1.4 in the Southeast coast of Africa.](figures/Biomass/Map_NamibianHakeFishery.png)
+
+ For further details
+about the fishery, we refer
+to the report from the International Commission for Southeast Atlantic
+Fisheries (@ICSEAF1989) 
+<!-- or to @HilbornMangel1997 and -->
+<!-- @McAllisterKirkwood98b. -->
+
+
+The two targeted species are pooled in
+the dataset. The catches concern the total annual commercial catches
+of hakes (in thousand tons) realized by large ocean-going trawlers
+operating in the ICSEAF zones 1.3 and 1.4. The catches per unit
+effort data (CPUEs) are the catches per hours of fishing for a
+specific class of Spanish trawlers. As the CPUEs are standardized,
+they are considered here as a reliable index of abundance for the
+Namibian hake stock.
+
+<!-- We rely on these data to model the dynamics of hake stock biomass -->
+<!-- through dynamic Biomass Production Models (BPM). A -->
+<!-- dynamic BPM is a voluntarily crude but useful simplification of some -->
+<!-- harvested fish population dynamics (@Hilborn1992; -->
+<!-- @Quinn1999a) that only aims at helping fisheries scientists to -->
+<!-- interpret the data (*e.g.*, catches and abundance indices).  -->
+Analyzing data through BPMs
+allows to assess how the fishery pressure has impacted the biomass.
+For instance, it provides answers to questions such as:
+
+* What is the maximum sustainable yield ($C_{MSY}$) and what are the past
+and current levels of yield sustainable with regards to the $C_{MSY}$?
+
+* How large was the abundance in year 1988 (the last year for the dataset)
+with reference to its level when the fishery began?
+
+* Could biomass level increase and yield be improved if more restrictive
+fishing quotas are imposed in the future?
+
+
+The latter question is particularly important to test the performance of
+alternative management scenarios when efforts are being made to control the
+level of catches and promote sustainable harvest.
+
 
 ## State-space modeling of a biomass production model
 
@@ -58,6 +116,8 @@ where
 - $\theta_1 = \{r, K, \sigma_p \}$
 - $\theta_2 = \{q, \sigma_o \}$
 
+
+![Directed acyclic graph of the state-space biomass production model](figures/Biomass/DAGBiomProd.png)
 
 ### Writing the model in Stan
 
@@ -123,20 +183,13 @@ generated quantities {
 ```
 
 ```{r data}
-# dat <- read.table("Chap_11_1_SSM_BiomProd_NamibianHake/data_table.txt", 
-#                   header = TRUE)
-# dat_list <- list(N = nrow(dat),
-#                  NF = 5,
-#                  Year = dat$Year,
-#                  C = dat$C,
-#                  I = dat$I[2:length(dat$I)])
 data(BioprodNamibianHake, package = "hbm4ecology")
 dat_list <- BioprodNamibianHake
 dat_list$I <- BioprodNamibianHake$I[2:25]
 dat_list$NF <- 5
 ```
 
-```{r fit-model}
+```{r fit-model, cache=TRUE}
 model_name <-"BiomProd_NamibianHake"
 sm_hier <- stan_model(model_code =  stan_model_biomprod,
                  model_name =  model_name)
@@ -150,7 +203,7 @@ fit_hier <- sampling(object = sm_hier,
                 iter = 4000, 
                 warmup = 2000, 
                 thin = 1,
-                control = list("adapt_delta" = .9)#"max_treedepth" = 12)
+                control = list("adapt_delta" = .9)
 )
 ```
 
@@ -160,7 +213,7 @@ pars = c("r", "K", "q", "sig")
 pairs(fit_hier, pars = c("r", "K", "q", "sig") )
 traceplot(fit_hier, pars)
 stan_rhat(fit_hier)
-mcmc_trace(fit_hier, pars = pars)
+#mcmc_trace(fit_hier, pars = pars)
 rhat(fit_hier, pars = pars)
 ```
 ```{r}
@@ -337,7 +390,7 @@ generated quantities {
 ```
 
 
-```{r fit-model-fox}
+```{r fit-model-fox, cache=TRUE}
 model_name <-"BiomProd_NamibianHake_fox"
 sm_fox <- stan_model(model_code =  stan_model_fox,
                  model_name =  model_name)
