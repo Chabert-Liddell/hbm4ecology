@@ -31,3 +31,7 @@ pkgdown::build_home_index(); pkgdown::init_site();pkgdown::preview_site()
 # usethis::use_article(name = "hierarchical-succesive-removal-with-habitat-and-time-covariates",
 #                      title = "Hierarchical Model for Successive Removal Data
 #                      with Habitat and Time Covariates")
+
+hexSticker::sticker(imgurl, package="hbm4ecology", p_size=19, s_x=1, s_y=.8, s_width= .69,
+        h_fill = "#4da598", h_color = "#000000",
+        filename="inst/figures/logo.png")

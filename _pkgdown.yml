@@ -1,4 +1,4 @@
-url: ~
+url: http://hbm-for-ecology.org/rpackage
 template:
   bootstrap: 5
   bslib:
@@ -7,3 +7,19 @@ template:
     primary: "#4da598"
 navbar:
   bg: primary
+  structure:
+    left:  [reference, articles]
+    right: [search, github]
+reference:
+- title: "Data"
+  desc: "Data available from the different example"
+  contents:
+  - BioprodNamibianHake
+  - CmrOir
+  - HsrAsalmon
+- title: "Helper functions"
+  desc: >
+    Function to extract information from rjags and rstan object and to
+    change data form to be suitable for rstan
+  contents:
+  - starts_with("extract")
