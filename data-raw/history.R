@@ -6,6 +6,15 @@ usethis::use_r("utils")
 
 devtools::document()
 
+
+# usethis::use_package("rstan", type = "Suggests")
+# usethis::use_package("tidyverse", type = "Suggests")
+# usethis::use_package("GGally", type = "Suggests")
+# usethis::use_package("posterior", type = "Suggests")
+# usethis::use_package("bayesplot", type = "Suggests")
+
+
+
 usethis::use_pkgdown()
 usethis::use_github_pages()
 usethis::use_github_action("pkgdown")

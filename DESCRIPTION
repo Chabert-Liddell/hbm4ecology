@@ -23,4 +23,9 @@ RoxygenNote: 7.2.0
 Imports: 
     magrittr
 Suggests: 
-    rmarkdown
+    bayesplot,
+    GGally,
+    posterior,
+    rmarkdown,
+    rstan,
+    tidyverse

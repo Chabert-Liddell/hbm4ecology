@@ -3,6 +3,9 @@ title: "Biomass Production Model: The Namibian Hake Fishery"
 subtitle: "Chapter 11.2"
 bibliography: references.bib
 link-citations: TRUE
+resource_files:
+  - figures/Biomass/Map_NamibianHakeFishery.png
+  - figures/Biomass/DAGBiomProd.png
 ---
 
 ```{r, include = FALSE}

@@ -5,7 +5,8 @@ title: "Hierarchical Stock Recruitment"
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.retina = 2
 )
 ```
 
