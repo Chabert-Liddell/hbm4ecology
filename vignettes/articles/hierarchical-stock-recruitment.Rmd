@@ -1,5 +1,10 @@
 ---
-title: "Hierarchical Stock Recruitment"
+title: "Hierarchical Stock Recruitment Analysis"
+subtitle: "Stan program for Hierarchical Stock-recruitment analysis (with covariates Latitude) Chapter 9 - section 9.3"
+bibliography: references.bib
+link-citations: TRUE
+resource_files:
+  - figures
 ---
 
 ```{r, include = FALSE}
@@ -17,9 +22,140 @@ library(tidyverse)
 ```
 
 
-Parent E. and Rivot E. - An introduction to Hierarchcial Modeling of Ecological Data Chapman et al. 2012
+This article develops a hierarchical extension of the Ricker Stock Recruitment
+model. The data and models are based on a published paper by Pr{\'{e}}vost et al. @Prevost2003; but see also
+@PrevostChaput2001.
 
-Stan program for Hierarchical Stock-recruitment analysis (with covariates Latitude) Chapter 9 - section 9.3
+We show that the hierarchical assemblage of several
+salmon populations which we model as exchangeable units appears
+ as the working solution to transfer information and borrow strength
+from data-rich to data-poor situations. 
+ The data structure is sophisticated with Normal latent 
+vectors, and the probabilistic structures have to be designed
+conditionally on some available covariates, namely the latitude and the
+riverine wetted area accessible to salmon. 
+
+## Data
+
+```{r}
+data("SRSalmon")
+```
+
+
+The analysis of stock and
+recruitment (SR) relationships is the most widely used approach for deriving
+*Biological Reference Points* in fisheries sciences. It is particularly
+well suited for anadromous salmonid species for which the recruitment of
+juveniles in freshwater is more easily measured than the recruitment of marine
+species. SR relationships are critical
+for setting reference points for the management of salmon populations, such as
+the spawning target $S^{\ast}$, a biological reference point for the number of
+spawners which are necessary to guarantee an optimal sustainable exploitation,
+or the maximum sustainable exploitation rate $h^{\ast}$.
+
+
+```{r}
+tibble(
+  River = SRSalmon$name_riv,
+  Country = SRSalmon$country_riv,
+  Latitude = SRSalmon$lat,
+  `Area accessible to salmon` = SRSalmon$area
+) %>% knitr::kable()
+```
+
+<!-- |River        |Country    | Latitude| Area accessible to salmon| -->
+<!-- |:------------|:----------|--------:|-------------------------:| -->
+<!-- |Nivelle      |France     | 43.50000|                    320995| -->
+<!-- |Oir          |France     | 48.50000|                     48000| -->
+<!-- |Frome        |England    | 50.50000|                    876420| -->
+<!-- |Dee          |England    | 53.00000|                   6170000| -->
+<!-- |Burrishoole  |Ireland    | 53.98515|                    155000| -->
+<!-- |Lune         |England    | 54.50000|                   4230000| -->
+<!-- |Bush         |N. Ireland | 55.00000|                    845500| -->
+<!-- |Mourne       |N. Ireland | 55.00000|                  10360560| -->
+<!-- |Faughan      |N. Ireland | 55.00000|                    882380| -->
+<!-- |Girnock Burn |Scotland   | 57.00000|                     58764| -->
+<!-- |North Esk    |Scotland   | 57.00000|                   2100000| -->
+<!-- |Laerdalselva |Norway     | 61.00000|                    704000| -->
+<!-- |Ellidaar     |Iceland    | 64.00000|                    199711| -->
+
+
+<!-- | River | Country | Latitude (${{}^{\circ}}$N) | Riverine wetted area accessible to salmon ($m^{2}$) | Number of SR observations (years) | -->
+<!-- |------|_________|___________|_______________________________|_______________| -->
+<!-- | Nivelle | France | $43$ | $320995$ | $12$ | -->
+<!-- | Oir | France | $48.5$ | $48000$ | $14$ | -->
+<!-- | Frome | England | $50.5$ | $876420$ | $12$ | -->
+<!-- | Dee | England | $53$ | $6170000$ | $9$ | -->
+<!-- | Burrishoole | Ireland | $54$ | $155000$ | $12$ | -->
+<!-- | Lune | England | $54.5$ | $4230000$ | $7$ | -->
+<!-- | Bush | N. Ireland | $55$ | $845500$ | $13$ | -->
+<!-- | Mourne | N. Ireland | $55$ | $10360560$ | $13$ | -->
+<!-- | Faughan | N. Ireland | $55$ | $882380$ | $11$ | -->
+<!-- | Girnock Burn | Scotland | $57$ | $58764$ | $12$ | -->
+<!-- | North Esk | Scotland | $57$ | $2100000$ | $6$ | -->
+<!-- | Laerdalselva | Norway | $61$ | $704000$ | $8$ | -->
+<!-- | Ellidaar | Iceland | $64$ | $199711$ | $10$ | -->
+
+<center>
+
+![Location of the 13 index rivers with
+available stock-recruitment datasets for A. salmon (from  @Prevost2003).](figures/SRSalmon/Map_13rivers.png){width=70% height=70%}
+
+</center>
+
+<!-- \begin{figure}[h] -->
+<!-- \begin{center} -->
+<!-- \includegraphics[width=1.0\textwidth]{Figchapter5x6/SRSalmon/Map_13rivers.pdf} -->
+<!-- \end{center} -->
+<!-- \caption[Location of the 13 index rivers]{Location of the 13 index rivers with -->
+<!-- available stock-recruitment datasets for A. salmon (from \cite{Prevost+03}).}% -->
+<!-- \label{Fig5x6:Map_13rivers}% -->
+<!-- \end{figure} -->
+
+There are several hundreds of salmon stocks in the northeast Atlantic area,
+each having its own characteristics with regard to the size and productivity
+of the salmon populations. But resources to collect SR data are limited and
+suitable SR series (both in terms of length and reliability of observations)
+such as the ones of `SRSalmon` are only available for a handful of monitored 
+rivers spread throughout the European area of distribution of the species.
+These so-called *index rivers* are a representative sample from the
+salmon rivers located in western Europe and under the influence of the Gulf
+Stream. This sample covers a broad area including Spain, France, UK, Ireland,
+Norway, the western coast of Sweden and the southwestern coast of Iceland. The collection and pre-processing procedures 
+used to obtain the data ready for SR analysis presented in Table
+<!-- \ref{tab5x6:13rivers} and Fig. \ref{Fig5x6:FittedSR_13rivers} -->
+are described in detail in @Crozier2003 or @Prevost2003.
+Here, hierarchical modeling will be used to address two questions:
+
+\begin{itemize}
+\item How is the SR information transferred from the monitored data-rich
+rivers to set Biological Reference Points for other sparse-data salmon rivers,
+while accounting for the major sources of uncertainty?
+
+\item How can the joint analysis of the SR relationship for the 13 index
+rivers be used to forecast biological reference points for a new river without
+any SR data but for which relevant covariates are available?
+\end{itemize}
+
+<!-- \begin{figure}[ph] -->
+<!-- \begin{center} -->
+<!-- \includegraphics[width=0.9\textwidth]{Figchapter5x6/SRSalmon/FittedSR_13rivers.png} -->
+<!-- \end{center} -->
+<!-- \caption[Fitted SR relationships for the 13 monitored rivers]{The Atlantic -->
+<!-- salmon SR series on the 13 index rivers and fitted SR relationships. $S$ -->
+<!-- (\emph{x}-axis) and $R$ (\emph{y}-axis) are the stock and recruitment -->
+<!-- variables after standardization for river size expressed in eggs per $m^{2}$ -->
+<!-- of riverine wetted area accessible to salmon. The SR Ricker curves are graphed -->
+<!-- for two model configurations, the model assuming independence between rivers -->
+<!-- (thin line) and the hierarchical model (bold line). SR curves are graphed with -->
+<!-- parameters ($S^{\ast},h^{\ast}$) set at the median of their marginal posterior -->
+<!-- distributions.}% -->
+<!-- \label{Fig5x6:FittedSR_13rivers}% -->
+<!-- \end{figure} -->
+
+<!-- Parent E. and Rivot E. - An introduction to Hierarchcial Modeling of Ecological Data Chapman et al. 2012 -->
+
+<!-- Stan program for Hierarchical Stock-recruitment analysis (with covariates Latitude) Chapter 9 - section 9.3 -->
 
 
 
@@ -48,6 +184,13 @@ A more refined gamma elicitation:
 A simple uniform:
 
 - $S_k^* \sim Uniform(0,200)$
+
+
+<center>
+
+![Directed acyclic graph of the stock recruitment model with covariates](figures/SRSalmon/DAGHierSRLatitude.png){width=70% height=70%}
+
+</center>
 
 ### Writing the model in stan
 
@@ -103,7 +246,7 @@ model {
 ```
 
 ```{r}
-data("HsrAsalmon")
+data("SRSalmon")
 # data <- list(
 # 
 # n_riv = 13, 
@@ -159,7 +302,7 @@ data("HsrAsalmon")
 ```
 
 
-```{r}
+```{r cache=TRUE}
 #options(mc.cores = parallel::detectCores())
 # Number iteration for the "warm up" phase
 n_warm <- 2500
@@ -191,7 +334,7 @@ params<-c("Sopt","hopt","tau")
 
 
 fit <- sampling(object = sm,
-                data = HsrAsalmon, 
+                data = SRSalmon, 
                 pars = NA, #params,
                 chains = n_chains, 
                 iter = n_iter, 
@@ -299,7 +442,7 @@ model {
 "
 ```
 
-```{r}
+```{r cache = TRUE}
 #options(mc.cores = parallel::detectCores())
 # Number iteration for the "warm up" phase
 n_warm <- 2500
@@ -317,7 +460,7 @@ params<-c("Sopt","hopt","tau")
 
 
 fit <- sampling(object = sm,
-                data = HsrAsalmon, 
+                data = SRSalmon, 
                 pars = NA, #params,
                 chains = n_chains, 
                 iter = n_iter, 
@@ -498,16 +641,16 @@ generated quantities {
 ```
 
 ```{r}
-data_lat <- list(
-  lat = c(43.5, 48.5, 50.5, 53, 53.98515, 54.5, 55, 55, 55, 57, 57, 61, 64),
-  lat_pred = c(46, 52, 59, 63), 
-  n_pred = 4
-)
-
-data_hier <- c(HsrAsalmon, data_lat)
+# data_lat <- list(
+#   lat = c(43.5, 48.5, 50.5, 53, 53.98515, 54.5, 55, 55, 55, 57, 57, 61, 64),
+#   lat_pred = c(46, 52, 59, 63), 
+#   n_pred = 4
+# )
+# 
+# data_hier <- c(SRSalmon, data_lat)
 ```
 
-```{r}
+```{r cache=TRUE}
 model_name_hier <-"HSR_Ricker_LogN_Management_S_gamma_hier"
 sm_hier <- stan_model(model_code =  hsr_model_hier_S_gamma_stan,
                  model_name =  model_name_hier)
@@ -516,7 +659,7 @@ params<-c("Sopt","hopt","tau")
 
 
 fit_hier <- sampling(object = sm_hier,
-                data = HSrAsalmon, 
+                data = SRSalmon, 
                 pars = NA, #params,
                 chains = n_chains,
                 # init = lapply(seq(4), function(x)
@@ -595,7 +738,7 @@ hopt_ind <- fit %>% extract_longer() %>%
 
 
 ```{r}
-max_S <- sapply(seq_along(Sopt_ind), function(k) max(HsrAsalmon$S[HsrAsalmon$riv == k]))
+max_S <- sapply(seq_along(Sopt_ind), function(k) max(SRSalmon$S[SRSalmon$riv == k]))
 Splot <- seq(0,100,length.out=1000)
 Rplot_ind <- lapply(seq_along(Sopt_ind),
   function(k) {
@@ -640,8 +783,8 @@ Rplot_hier <- lapply(seq_along(Sopt_hier),
 
 
 ```{r}
-tibble(R = HsrAsalmon$R, S = HsrAsalmon$S, 
-       river = factor(names_ind[HsrAsalmon$riv], levels = names_ind)) %>% 
+tibble(R = SRSalmon$R, S = SRSalmon$S, 
+       river = factor(names_ind[SRSalmon$riv], levels = names_ind)) %>% 
   ggplot() +
   aes(x = S, y = R) +
   geom_point() +
@@ -709,14 +852,14 @@ fit_data <- fit_hier_l %>%
   filter(str_detect(parameter, "Sopt\\.")) %>%
   rename("S*" = value) %>% 
   mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = data_hier$lat[as.numeric(str_sub(parameter, 6))],
+    Latitude = SRSalmon$lat[as.numeric(str_sub(parameter, 6))],
          type = "data") 
 
 fit_pred <- fit_hier_l %>% 
   filter(str_detect(parameter, "Sopt_")) %>%
   rename("S*" = value) %>% 
   mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = data_hier$lat_pred[as.numeric(str_sub(parameter, 11))],
+    Latitude = SRSalmon$lat_pred[as.numeric(str_sub(parameter, 11))],
          type = "pred") 
 
 fit_data %>% bind_rows(fit_pred) %>% 
@@ -741,14 +884,14 @@ fit_data <- fit_hier_l %>%
   filter(str_detect(parameter, "^hopt\\.")) %>% # detect hopt. without logit_hopt.
   rename("h*" = value) %>% 
   mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = data_hier$lat[as.numeric(str_sub(parameter, 6))],
+    Latitude = SRSalmon$lat[as.numeric(str_sub(parameter, 6))],
          type = "data") 
 
 fit_pred <- fit_hier_l %>% 
   filter(str_detect(parameter, "^hopt_")) %>%
   rename("h*" = value) %>% 
   mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = data_hier$lat_pred[as.numeric(str_sub(parameter, 11))],
+    Latitude = SRSalmon$lat_pred[as.numeric(str_sub(parameter, 11))],
          type = "pred") 
 
 fit_data %>% bind_rows(fit_pred) %>% 
@@ -766,3 +909,6 @@ fit_data %>% bind_rows(fit_pred) %>%
 #  ylab("log(S*)") +
   theme_classic(base_size = 15L, base_rect_size = 1)
 ```
+
+
+# References

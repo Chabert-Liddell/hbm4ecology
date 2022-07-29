@@ -48,6 +48,11 @@ pkgdown::build_home_index(); pkgdown::init_site();pkgdown::preview_site()
 #                      title = "Hierarchical Model for Successive Removal Data
 #                      with Habitat and Time Covariates")
 
+#pkgdown::build_article("articles/namibian-hake-biomass-production")
+#pkgdown::build_article("articles/hierarchical-stock-recruitment")
+
+
+
 hexSticker::sticker(imgurl, package="hbm4ecology", p_size=20, s_x=1, s_y=.8, s_width= .69,
         h_fill = "#4da598", h_color = "#000000",
         filename="inst/figures/logo.png")

@@ -16,13 +16,20 @@ CmrOir <- list(
 usethis::use_data(CmrOir, overwrite = TRUE)
 
 
-HSrAsalmon <- list(
+SRSalmon <- list(
 
   n_riv = 13,
 
   name_riv = c("Nivelle","Oir","Frome","Dee","Burrishoole","Lune","Bush",
                "Mourne","Faughan","Girnock Burn","North Esk","Laerdalselva",
                "Ellidaar"),
+
+  country_riv = c("France", "France", "England", "England", "Ireland", "England",
+                  "N. Ireland", "N. Ireland", "N. Ireland", "Scotland", "Scotland",
+                  "Norway", "Iceland"),
+
+  area = c(320995, 48000, 876420, 6170000, 155000, 4230000, 845500, 10360560,
+           882380, 58764, 2100000, 704000, 199711),
 
   n_obs = c(12,14,12,9,12,7,13,13,11,12,6,8,10),
 
@@ -77,7 +84,7 @@ HSrAsalmon <- list(
 )
 
 
-usethis::use_data(HSrAsalmon, overwrite = TRUE)
+usethis::use_data(SRSalmon, overwrite = TRUE)
 
 
 SucRemNivelle <-

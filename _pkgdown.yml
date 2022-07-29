@@ -1,4 +1,4 @@
-url: http://hbm-for-ecology.org/rpackage
+url: ~
 template:
   bootstrap: 5
   bslib:
@@ -16,7 +16,8 @@ reference:
   contents:
   - BioprodNamibianHake
   - CmrOir
-  - HsrAsalmon
+  - SRSalmon
+  - SucRemNivelle
 - title: "Helper functions"
   desc: >
     Function to extract information from rjags and rstan object and to
