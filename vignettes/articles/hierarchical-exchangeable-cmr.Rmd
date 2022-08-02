@@ -1,15 +1,461 @@
 ---
-title: "Hierarchical Exchangeable Binomial Model
-                     for Capture-Mark-Recapture Data"
+title: "Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data"
+subtitle: "Jags code for chapter 9.2"
+bibliography: references.bib
+link-citations: TRUE
+resource_files:
+  - figures
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
+  fig.align = "center",
+  fig.retina = 2,
   comment = "#>"
 )
 ```
 
-```{r setup}
+```{r setup, message=FALSE}
 library(hbm4ecology)
+library(rjags)
+library(tidyverse)
+library(GGally)
+library(posterior)
+library(bayesplot)
 ```
+
+
+The main idea is to link the capture-mark-recapture (CMR) models for yearly observations together by a hierarchical structure. In this case study inspired 
+by the article of @RivotPrevost2002, the years are the statistical units that 
+look alike and that hypothesized resemblance allows for transferring information 
+from a given year to the other years.
+
+# Data
+
+Relatively long but sparse (small sample size) series of data are
+quite common when dealing with CMR surveys aimed at estimating the
+abundance of wild populations over a series of years. For instance
+on the Oir River, the rangers from the French National Research
+Institute for Agronomy (INRA) and from the National Office of Water
+Management (ONEMA) have collected CMR data about adult salmon that
+swam back to spawn in the Oir River for the years
+1984--2000.
+
+<center>
+
+![Figure 1 -- Marking a spawner entering the Scorff River](figures/CmrOir/AdultMarkRecapture.png){width=80% height=80%}
+</center>
+
+```{r data}
+data("CmrOir")
+CmrOir[2:7] %>% as_tibble() %>% 
+  mutate(Year = 1984:2000, .before=1)%>% knitr::kable()
+```
+
+
+For each year $t$ from
+$1984$ to $2000$, $y_{1,t}$ denotes the number of fish trapped at the Cerisel
+station (close to the mouth of the river). 
+$y_{2,t}+y_{3,t}$ individuals from the captured ones are not replaced
+upstream, either because they died during manipulation or because they are
+removed for experimental use or for hatchery production. Let $y_{4,t}=y_{1,t}-(y_{2,t}+y_{3,t})$ the number of (tagged) fish released. These
+spawners are individually marked before they keep on swimming upstream . The recapture sample is gathered during and
+after spawning (see more details on recapture conditions hereafter). Let us
+denote as $y_{5,t}$ and $y_{6,t}$ the number of marked and unmarked fish among
+recaptured fish, respectively.
+
+
+
+<center>
+
+![Figure 2 -- Schame of the Cerisel trapping facility (Oir river, Normandy, France) working as a double downstream (for smolt runs) and upstream (for spawner runs) partial counting fence. The black circles at the top of the figure indicates the release site of tagged smolts and spawners. The release site and the downstream trap are 1 km away from each other.](figures/CmrOir/CeriselTrap.png){width=80% height=80%}
+
+</center>
+
+# Modeling
+
+## Observation submodels for the first phace (Cerisel trapping place)
+
+Let,
+
+* $\nu_t$ be the population size of spawners at year $t$
+* $\pi_t^1$ be the unknown trapping efficiency,
+
+and assume all of the $\nu_t$ spawners are independently and equally catchable in the trop with a probability $\pi^1_t$ constant over the migration season. Then, the number of fish trrapped at the counting fence during migration time is the result of a Binomial experiment:
+
+* $y_{1,t} \sim Binomial(\nu_t, \pi^1_t)$.
+
+## Observation submodels for the second phase (re-collection during and after spawning)
+
+The recapture sample is obtrainged by three methods: electrofishing on the spawning grounds, collection of dead fish after spawning, and trapping of spent fish at the downstram trap of the Cerisel facility. Modeling recapture with Binomial experiments with effeciency $\pi^2_t$ is reasonable assuming the three
+following hypotheses: No spawner runs downstream after getting over the trap
+($H1$); there is no tag shedding ($H2$); the recapture probability $\pi_{t}^{2}$ is the same for all the fish whether or not marked ($H3$):
+
+* $y_{5,t} \sim Binomial(y_{4,t}, \pi^2_t)$
+* $y_{6,t} \sim Binomial(\nu_t - y_{1,t}, \pi^2_t)$
+
+## Latent layers
+
+Let  $Z_t = (\nu_t, \pi^1_t, \pi^2_t)$ be the latent vector and $y_t = (y_{1,t}, y_{5,t}, y_{6,t})$ the observations. The natural choice for the latent distributions are the Beta distribtion for $\pi^1_t$ and $\pi^2_t$ and the Negative Binomial ditribution for $\nu_t$:
+
+* $\pi^1_t \sim Beta(a_1, b_1)$
+* $\pi^2_t \sim Beta(a_2, b_2)$
+* $\nu_t \sim NegBinomial(c,d)$
+
+
+<center>
+
+![Figure 3 -- Directed Acyclic Graph representation of the hierarchical structure for the joint modeling of capture-mark-recapture experiments for the 17 years. ](figures/CmrOir/DAG_CMR_Oir_Hierarchical.png){width=80% height=80%}
+
+</center>
+
+We assign a diffuse prior distribution to the higher level parameters $\theta = (a_1, a_2, b_1, b_2, c, d)$ to reflect some ignorance about them. We use the following transform which recovers well understood meaning. For the trapping efficiency:
+
+* $\mu_{a,b} = \frac{a}{a+b}$ is the mean of the Beta distribution, with $\mu_{a,b} \sim Beta(1.5, 1.5)$
+* $u_{a,b} = a+b$ can be interpreted as a prior sample size that scale the variance of the Beta distribution, with $\log(u_{a,b} \sim Uniform(0,10)$).
+
+For the number of spawners:
+
+* $\mu_{c,d} = \frac{c}{d}$ is the mean of the Negative Binomial distribution, with $\mu_{c,d} \sim Uniform(0, \mu_{max})$, where $\mu_{max} = 3000$ fish.
+* $\sigma^2_{c,d} = \frac{c(d+1)}{d^2}$ is the variance of the Negative Binomial distrution, with $\log(\sigma_{c,d}) \sim Uniform(\log(\mu_{c,d}), \log(\sigma^2_{max}))$, where $\sigma^2_{max} = 12$ since we do not believe that the standard deviation might exceed $400$ fish. 
+
+## Independent modeling
+
+To show how a transfer of information between years is organized by the
+hierarchical model, we compare its results with the model assuming
+independence between years. For the models with independence, independent
+prior distributions with known parameters were set on $(\nu_{t},\pi_{t}%
+^{1},\pi_{t}^{2})$:
+
+*  $\pi_{t}^{1} \; \sim \; Beta(1.5,1.5)$ 
+*  $\pi_{t}^{2} \; \sim \; Beta(1.5,1.5)$
+*  $\nu_{t} \; \sim \; Uniform(1,3000)$ 
+
+# Implementation, results and analysis
+
+## Independent model
+
+The model can be written in `rjags` as the following string:
+
+```{r ind-str}
+ind_model_str <- "
+  model { 
+
+    # N = 17 years (1984 to 2000)
+    pnu <- rep(1, 3000)
+    for (i in 1:N)
+      {
+
+      # Prior for trapping efficiency pi1
+
+      pi1[i] ~ dbeta(1.5,1.5)
+
+      # Prior for recapture efficiency pi2
+
+      pi2[i] ~ dbeta(1.5,1.5)
+      nu[i] ~ dcat(pnu[])
+
+
+
+      # Escapement (number of fish that mate)
+
+      Nsp[i] <- max(nu[i]-y2[i]-y3[i],0)
+
+      # Number of unmarked fish
+
+      nm[i] <- max(nu[i]-y1[i],0)
+
+      #  Likelihood (binomial for capture and recapture)
+
+      y1[i] ~ dbin(pi1[i],nu[i])
+      y6[i] ~ dbin(pi2[i],nm[i])
+      y5[i] ~ dbin(pi2[i],y4[i])
+	
+} # end of loop on year i
+
+} # end of model"
+```
+
+And we fix the following initialization points for each of the three chains.
+
+```{r ind-init}
+ind_init <- 
+list(
+  list(pi1 = rep(.5,CmrOir$N), pi2 = rep(.5, CmrOir$N), nu = rep(300, CmrOir$N)),
+  list(pi1 = rep(.2,CmrOir$N), pi2 = rep(.5, CmrOir$N), nu = rep(500, CmrOir$N)),
+  list(pi1 = rep(.8,CmrOir$N), pi2 = rep(.5, CmrOir$N), nu = rep(1000, CmrOir$N))
+)
+```
+
+
+```{r ind-fit,cache=TRUE}
+ind_model <- jags.model(file = textConnection(ind_model_str), 
+                    data = CmrOir, inits = ind_init,
+                    n.chains = 3)
+
+# Inferences
+update(ind_model, n.iter = 10000)
+posterior_sample_ind <- coda.samples(ind_model,
+                       variable.names = c("pi1", "pi2", "nu"),
+                       n.iter = 10000,
+                       thin = 10)
+```
+
+
+### Diagnostic
+
+```{r}
+summarise_draws(as_draws_df(posterior_sample_ind),
+                default_convergence_measures()) %>% 
+  knitr::kable()
+```
+
+
+## Hierarchical model
+
+```{r hier-mod}
+hier_model_str <- "
+  model { 
+
+    # N = 17 years (1984 to 2000)
+    
+    # Hyperprior for thetrapping efficiency
+    mu1_ab ~ dbeta(1.5, 1.5)
+    log_u1_ab ~ dunif(0,10)
+    u1_ab <- exp(log_u1_ab)
+    alpha1 <- mu1_ab * u1_ab
+    beta1 <- (1-mu1_ab)*u1_ab
+    
+    # Hyperprior for the recapture efficiency
+    mu2_ab ~ dbeta(1.5, 1.5)
+    log_u2_ab ~ dunif(0,10)
+    u2_ab <- exp(log_u2_ab)
+    alpha2 <- mu2_ab * u2_ab
+    beta2 <- (1-mu2_ab)*u2_ab
+    
+    # Hyperperior for nu_max
+    pmunu <- rep(1, 3000)
+    mu_nu ~ dcat(pmunu)
+    inf_log_sig2_nu <- log(mu_nu)
+    log_sig2_nu ~ dunif(inf_log_sig2_nu, 12)
+    sig2_nu <- exp(log_sig2_nu)
+    p <- mu_nu/sig2_nu  # d =  p/(1-p)
+    c <- mu_nu * p*(1-p)
+    
+    # Predictive distributions
+    
+    pi1_pred ~ dbeta(alpha1, beta1)
+    pi2_pred ~ dbeta(alpha2, beta2)
+
+    nu_pred ~ dnegbin(p,c)
+    
+    for (i in 1:N)
+      {
+
+      # Prior for trapping efficiency pi1
+
+      pi1[i] ~ dbeta(alpha1, beta1)
+
+      # Prior for recapture efficiency pi2
+
+      pi2[i] ~ dbeta(alpha2, beta2)
+      nu[i] ~ dnegbin(p,c)
+
+
+
+      # Escapement (number of fish that mate)
+
+      Nsp[i] <- max(nu[i]-y2[i]-y3[i],0)
+
+      # Number of unmarked fish
+
+      nm[i] <- max(nu[i]-y1[i],0)
+
+      #  Likelihood (binomial for capture and recapture)
+
+      y1[i] ~ dbin(pi1[i],nu[i])
+      y6[i] ~ dbin(pi2[i],nm[i])
+      y5[i] ~ dbin(pi2[i],y4[i])
+	
+} # end of loop on year i
+
+} # end of model"
+```
+
+
+And we fix the following initialization points for each of the three chains.
+
+```{r hier-init}
+hier_init <- 
+list(
+  list(pi1 = rep(.5, CmrOir$N), pi1_pred = .5, mu1_ab = .6,  log_u1_ab = .6,
+       pi2 = rep(.5, CmrOir$N), pi2_pred = .2, mu2_ab = .6,  log_u2_ab = .6, 
+       nu = rep(300, CmrOir$N), nu_pred = 300, mu_nu = 10, log_sig2_nu = 3),
+  list(pi1 = rep(.2, CmrOir$N), pi1_pred = .2, mu1_ab = .5,  log_u1_ab = .25,
+       pi2 = rep(.5, CmrOir$N), pi2_pred = .2, mu2_ab = .5,  log_u2_ab = .25, 
+       nu = rep(500, CmrOir$N), nu_pred = 500, mu_nu = 50, log_sig2_nu = 4),
+  list(pi1 = rep(.8, CmrOir$N), pi1_pred = .5, mu1_ab = .5,  log_u1_ab = .25,
+       pi2 = rep(.5, CmrOir$N), pi2_pred = .5, mu2_ab = .5,  log_u2_ab = .25, 
+       nu = rep(1000, CmrOir$N), nu_pred = 1000, mu_nu = 100, log_sig2_nu = 5)
+)
+```
+
+
+```{r hier-fit,cache=TRUE}
+hier_model <- jags.model(file = textConnection(hier_model_str), 
+                    data = CmrOir, inits = hier_init,
+                    n.chains = 3)
+
+# Inferences
+pars <-  c("pi1", "pi1_pred", "mu1_ab", "u1_ab",
+           "pi2", "pi2_pred", "mu2_ab", "u2_ab", 
+           "nu", "nu_pred", "mu_nu", "log_sig2_nu")
+
+update(hier_model, n.iter = 10000)
+posterior_sample_hier <- coda.samples(hier_model,
+                       variable.names = pars,
+                       n.iter = 10000,
+                       thin = 10)
+```
+
+### Diagnostic
+
+```{r}
+summarise_draws(as_draws_df(posterior_sample_hier),
+                default_convergence_measures()) %>% 
+  knitr::kable()
+```
+
+## Results and analysis
+
+We extract the results of both model into long form and wide form data frames.
+
+```{r}
+dfl_ind <- extract_longer(posterior_sample_ind) %>% 
+  mutate(Model = "Independent")
+dfw_ind <- extract_wider(posterior_sample_ind) %>% 
+  mutate(Model = "Independent")
+dfl_hier <- extract_longer(posterior_sample_hier) %>% 
+  mutate(Model = "Hierarchical")
+dfw_hier <- extract_wider(posterior_sample_hier) %>% 
+  mutate(Model = "Hierarchical")
+```
+
+
+### Comparing the efficiency and number of spawners distribution for both models
+
+```{r}
+dfl_ind %>% bind_rows(dfl_hier) %>% 
+  filter(str_detect(parameter, "^pi1\\.")) %>%
+  mutate(Years = as.factor(seq(1984,2000)[as.integer(str_sub(parameter, 5))])) %>%  # 5 = length("pi1.") + 1
+  ggplot() +
+  aes(x = Years, y = value, fill = Model) +
+  geom_boxplot(outlier.shape = NA, outlier.size = .25) +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  ylim(c(0,1)) +
+  scale_fill_manual(values = c("gray50", "gray90")) +
+  ylab("Trapping efficiency") + xlab("Years") +
+  theme_classic(base_size = 15L)
+```
+
+```{r}
+dfl_ind %>% bind_rows(dfl_hier) %>% 
+  filter(str_detect(parameter, "^pi2\\.")) %>%
+  mutate(Years = as.factor(seq(1984,2000)[as.integer(str_sub(parameter, 5))])) %>%  # 5 = length("pi2.") + 1
+  ggplot() +
+  aes(x = Years, y = value, fill = Model ) +
+  geom_boxplot(outlier.shape = NA, outlier.size = .25) +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  ylim(c(0,0.75)) +
+  scale_fill_manual(values = c("gray50", "gray90")) +
+  ylab("Recapture efficiency") + xlab("Years") +
+  theme_classic(base_size = 15L)
+```
+
+```{r}
+dfl_ind %>% bind_rows(dfl_hier) %>% 
+  filter(str_detect(parameter, "^nu\\.")) %>%
+  mutate(Years = as.factor(seq(1984,2000)[as.integer(str_sub(parameter, 4))])) %>%  # 4 = length("nu.") + 1
+  ggplot() +
+  aes(x = Years, y = value, fill = Model ) +
+  geom_boxplot(outlier.shape = NA, outlier.size = .25) +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  ylim(c(0,1000)) +
+  scale_fill_manual(values = c("gray50", "gray90")) +
+  ylab("Spawners") + xlab("Years") +
+  theme_classic(base_size = 15L)
+```
+
+Results highlight that hierarchical modeling has no effect on the inferences on 
+the capture efficiencies but gratly improve posterior inferences of psawners migrating back to the Oir River.
+
+Posterior mean values of the capture probabilities $\pi_{t}^{1}$ do not seem
+to shrink much toward their overall grand mean 
+and the recapture probabilities $\pi_{t}^{2}$'s are only slightly
+subjected to the shrinkage effect. There
+remains a lot of between-year variability in the experimental conditions at
+the Cerisel trapping facility.
+
+Conversely, the hierarchical structure hypothesized on $\nu_{t}$'s strongly
+reduces the skewness and uncertainty in the estimation of the number of
+spawners. The grey boxplots  clearly point
+out that the most precise inferences are obtained under the hierarchical
+model, especially for the years with sparse CMR data, *i.e.*, low number
+of marked released or, more importantly, low number of recaptures of
+previously marked fish yield (*e.g.*, years $1987$, $1990$, $1994$ and
+$2000$). For this latter year, the upper bounds of the $95\%$ Bayesian
+credibility intervals obtained with the model assuming independence between
+years appears unrealistically high given the size of the Oir River and the
+available knowledge on the biology and ecology of Atlantic salmon as
+exemplified for year $2000$.
+
+```{r}
+dfw_ind %>% bind_rows(dfw_hier) %>% 
+  ggplot(aes(x = `nu.17`, linetype = Model)) +
+  geom_density() +
+  xlim(c(0, 1000)) + 
+  xlab("Spawners") + ylab("") +
+  theme_classic(base_size = 15L)
+  
+```
+
+
+### Posterior predictive of the hierarchical model
+
+```{r}
+summarise_draws(as_draws_df(posterior_sample_hier),
+                default_summary_measures()) %>% 
+  filter(str_detect(variable, "pred"))
+```
+
+
+```{r}
+par.labs <- c("Spawners", "Trapping efficiency", 
+              "Recapture efficiency")
+names(par.labs) <- c("nu_pred", "pi1_pred", "pi2_pred")
+dfl_hier %>% 
+  filter(str_detect(parameter, "pred")) %>% 
+  ggplot(aes(x = value)) +
+  xlab("")+ ylab("") +
+  facet_wrap( ~ parameter, 
+              scales = "free", 
+              labeller = labeller(parameter = par.labs)) +
+  geom_density() +
+  theme_classic(base_size = 15L)
+```
+
+```{r}
+dfw_hier %>% 
+  select(mu1_ab, u1_ab) %>%
+  ggplot(aes(x = mu1_ab, y = u1_ab)) +
+  geom_density2d()
+```
+
+A straightforward result of the hierarchical model are the posterior predictive distributions of the trapping or recapture efficiencies and of the number of returns , denoted $[\pi^{1,new}|data_{1984:2000}]$ and $[\pi^{2,new}|data_{1984:2000}]$, and $[\nu^{new}|data_{1984:2000}],$ respectively. The posterior predictive of the recapture efficiency and of the returns are  informative distributions. Thus, the data of all years combined allow discarding *a priori* the possibility of very
+high trapping efficiency (*i.e.*, greater than 0.5) or high spawner population size (*i.e.*, greater than a thousand) in any additional year.
+
+In-depth sensitivity analyses and another observation model for the
+recaptures can be found in @RivotPrevost2002.
+
+# References

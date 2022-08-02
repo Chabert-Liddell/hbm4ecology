@@ -1,0 +1,85 @@
+# ---------------------------------------
+# BUGS program for SPAWNER run estimation
+# FULL HIERARCHICAL Model (HBM)
+
+# Chapter 9 - section 9.2
+# ---------------------------------------
+
+model
+{ 
+
+# Hyperprior for the trapping efficiency
+
+E_pi1 ~ dbeta(1.5,1.5) ;   
+u1_pi1 ~ dunif(0,10)
+u2_pi1 <- exp(u1_pi1)
+alpha1 <- E_pi1 * u2_pi1
+beta1 <- (1-E_pi1) * u2_pi1
+
+# Hyperprior for the recapture efficiency
+
+E_pi2 ~ dbeta(1.5,1.5) ;   
+u1_pi2 ~ dunif(0,10)
+u2_pi2 <- exp(u1_pi2)
+alpha2 <- E_pi2 * u2_pi2
+beta2 <- (1-E_pi2) * u2_pi2
+
+# Hyperprior for Ntot
+
+Enu ~ dunif(1,3000)
+inflogVnu <- log(Enu)
+LogVnu ~ dunif(inflogVnu, 12)
+Vnu <- exp(LogVnu)
+mu_nu <- Enu*Enu/(Vnu)
+nu_nu <- Enu/(Vnu)
+
+# Predictive distributions
+
+pi1_pred ~ dbeta(alpha1,beta1)
+pi2_pred ~ dbeta(alpha2,beta2)
+		
+lambda_pred ~ dgamma(mu_nu,nu_nu)
+nu_pred ~ dpois(lambda_pred)
+
+		
+# Nyears = 17 years (1984 to 2000)
+
+for (i in 1:Nyears)
+{
+
+# Prior for trapping efficiency pi1
+
+pi1[i] ~ dbeta(alpha1,beta1) ;
+
+# Prior for recapture efficiency pi2
+
+pi2[i] ~ dbeta(alpha2,beta2) ;
+
+
+# Prior for nu[i]
+# Trick for sampling nu in a inverse binomial with param (mu_nu,nu_nu) : 
+# Use conditionnal  sequential sampling : 
+# 1. draw lambda in a gamma(mu_nu,nu_nu)
+# 2. draw nu in a poisson(lambda)
+
+lambda[i] ~ dgamma(mu_nu,nu_nu)
+nu[i] ~ dpois(lambda[i])
+
+# Escapement (number of fish that mate)
+
+Nsp[i] <- max(nu[i]-y2_plus_y3[i],0)
+
+# Number of unmarked fish
+
+nm[i] <- max(nu[i]-y1[i],0)
+
+#  Likelihood (binomial for capture and recapture)
+
+y1[i] ~ dbin(pi1[i],nu[i])
+y6[i] ~ dbin(pi2[i],nm[i])
+y5[i] ~ dbin(pi2[i],y4[i])
+	
+} # end of loop on years i
+
+} # end of model
+

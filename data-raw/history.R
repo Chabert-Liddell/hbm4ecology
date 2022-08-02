@@ -18,8 +18,8 @@ devtools::document()
 usethis::use_pkgdown()
 usethis::use_github_pages()
 usethis::use_github_action("pkgdown")
-pkgdown::build_site()
-pkgdown::build_articles()
+#pkgdown::build_site()
+#pkgdown::build_articles()
 
 devtools::build_readme()
 pkgdown::build_home()
@@ -50,7 +50,8 @@ pkgdown::build_home_index(); pkgdown::init_site();pkgdown::preview_site()
 
 #pkgdown::build_article("articles/namibian-hake-biomass-production")
 #pkgdown::build_article("articles/hierarchical-stock-recruitment")
-
+pkgdown::build_article("articles/hierarchical-exchangeable-cmr");
+pkgdown::preview_site()
 
 
 hexSticker::sticker(imgurl, package="hbm4ecology", p_size=20, s_x=1, s_y=.8, s_width= .69,

@@ -26,7 +26,7 @@ library(bayesplot)
 ```
 
 
-## The Namibian hake fishery
+# The Namibian hake fishery
 
 
 Let us consider as a first example the data from the Namibian hake fishery.
@@ -83,9 +83,9 @@ alternative management scenarios when efforts are being made to control the
 level of catches and promote sustainable harvest.
 
 
-## State-space modeling of a biomass production model
+# State-space modeling of a biomass production model
 
-#### Process equation for the underlying dynamics of the biomass
+## Process equation for the underlying dynamics of the biomass
 
 - $\frac{\mbox{d}B_t}{\mbox{d}t} = h(B_t)$
 - $h(B_t) = r\times B_t \times (1-\frac{B_t}{K})$ the production function
@@ -101,14 +101,14 @@ Introducing the observed harvest between time $t$ and $t+1$,  $c_t$ and a log no
 - $\sigma^2_p = \sigma^2$, with $\log(\sigma^2) \sim Uniform(-20,20)$
 - with $B_1 = K e^{\epsilon_1}$
 
-#### Observation equation to link the data to the hidden process
+## Observation equation to link the data to the hidden process
 
 - $i_t = q \times B_t \times e^{\omega_t}$ the relative abundance index
 - $q$ such that $log(q) \sim Uniform (-20, 20)$ the catchability parameter
 - $\omega_t \sim Normal(0, \sigma_o^2)$ the observation noise
 - $\sigma^2_o = \sigma^2$, with $\log(\sigma^2) \sim Uniform(-20,20)$
 
-#### In state-space modeling notation:
+## In state-space modeling notation:
 
 \[
 \begin{cases}
@@ -129,7 +129,9 @@ where
 
 </center>
 
-### Writing the model in Stan
+# Sampling, results and analysis
+
+## Writing the model in Stan
 
 ```{r stan-model}
 stan_model_biomprod <- "
@@ -328,7 +330,7 @@ C_{MSY} = \frac{r \times K}{4} \\
 B_{MSY} = \frac{K}{2}
 \end{cases}
 
-The value of the Fox model are as follows:
+The production function of the Fox model is the following:
 \[ $h(B_t) = r \times B_t \times (1-\frac{\log(B_t)}{\log(K)}) \],
 with its associated fisheries management points:
 \begin{cases}

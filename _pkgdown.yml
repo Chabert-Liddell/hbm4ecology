@@ -14,10 +14,11 @@ reference:
 - title: "Data"
   desc: "Data available from the different example"
   contents:
-  - BioprodNamibianHake
   - CmrOir
   - SRSalmon
+  - SucRemOir
   - SucRemNivelle
+  - BioprodNamibianHake
 - title: "Helper functions"
   desc: >
     Function to extract information from rjags and rstan object and to

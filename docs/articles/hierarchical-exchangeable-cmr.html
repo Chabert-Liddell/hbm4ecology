@@ -43,7 +43,7 @@
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/hierarchical-exchangeable-cmr.html">Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data</a>
     <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment-analysis.html">Hierarchical Stock Recruitment Analysis</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment</a>
+    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment Analysis</a>
     <a class="dropdown-item" href="../articles/hierarchical-succesive-removal-with-habitat-and-time-covariates.html">Hierarchical Model for Successive Removal Data with Habitat and Time Covariates</a>
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
@@ -68,6 +68,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="" class="logo" alt=""><h1>Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data</h1>
+            <h3 data-toc-skip class="subtitle">Jags code for chapter
+9.2</h3>
             
       
       
@@ -77,8 +79,1372 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span></code></pre></div>
-  </main>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mcmc-jags.sourceforge.io" class="external-link">rjags</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggobi.github.io/ggally/" class="external-link">GGally</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/posterior/" class="external-link">posterior</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/bayesplot/" class="external-link">bayesplot</a></span><span class="op">)</span></span></code></pre></div>
+<p>The main idea is to link the capture-mark-recapture (CMR) models for
+yearly observations together by a hierarchical structure. In this case
+study inspired by the article of <span class="citation">Rivot and
+Prévost (<a href="#ref-RivotPrevost2002" role="doc-biblioref">2002</a>)</span>, the years are the statistical
+units that look alike and that hypothesized resemblance allows for
+transferring information from a given year to the other years.</p>
+<div class="section level2">
+<h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
+</h2>
+<p>Relatively long but sparse (small sample size) series of data are
+quite common when dealing with CMR surveys aimed at estimating the
+abundance of wild populations over a series of years. For instance on
+the Oir River, the rangers from the French National Research Institute
+for Agronomy (INRA) and from the National Office of Water Management
+(ONEMA) have collected CMR data about adult salmon that swam back to
+spawn in the Oir River for the years 1984–2000.</p>
+<center>
+<div class="figure">
+<img src="figures/CmrOir/AdultMarkRecapture.png" style="width:80.0%;height:80.0%" alt=""><p class="caption">Figure 1 – Marking a spawner entering the Scorff
+River</p>
+</div>
+</center>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"CmrOir"</span><span class="op">)</span></span>
+<span><span class="va">CmrOir</span><span class="op">[</span><span class="fl">2</span><span class="op">:</span><span class="fl">7</span><span class="op">]</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/as_tibble.html" class="external-link">as_tibble</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Year <span class="op">=</span> <span class="fl">1984</span><span class="op">:</span><span class="fl">2000</span>, .before<span class="op">=</span><span class="fl">1</span><span class="op">)</span><span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">Year</th>
+<th align="right">y1</th>
+<th align="right">y2</th>
+<th align="right">y3</th>
+<th align="right">y4</th>
+<th align="right">y5</th>
+<th align="right">y6</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1984</td>
+<td align="right">167</td>
+<td align="right">10</td>
+<td align="right">3</td>
+<td align="right">154</td>
+<td align="right">12</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="right">1985</td>
+<td align="right">264</td>
+<td align="right">37</td>
+<td align="right">11</td>
+<td align="right">216</td>
+<td align="right">21</td>
+<td align="right">4</td>
+</tr>
+<tr class="odd">
+<td align="right">1986</td>
+<td align="right">130</td>
+<td align="right">28</td>
+<td align="right">9</td>
+<td align="right">93</td>
+<td align="right">5</td>
+<td align="right">4</td>
+</tr>
+<tr class="even">
+<td align="right">1987</td>
+<td align="right">16</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">12</td>
+<td align="right">2</td>
+<td align="right">22</td>
+</tr>
+<tr class="odd">
+<td align="right">1988</td>
+<td align="right">226</td>
+<td align="right">35</td>
+<td align="right">8</td>
+<td align="right">183</td>
+<td align="right">12</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">1989</td>
+<td align="right">235</td>
+<td align="right">31</td>
+<td align="right">5</td>
+<td align="right">199</td>
+<td align="right">56</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">1990</td>
+<td align="right">15</td>
+<td align="right">4</td>
+<td align="right">4</td>
+<td align="right">7</td>
+<td align="right">2</td>
+<td align="right">15</td>
+</tr>
+<tr class="even">
+<td align="right">1991</td>
+<td align="right">44</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">44</td>
+<td align="right">23</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">1992</td>
+<td align="right">31</td>
+<td align="right">10</td>
+<td align="right">1</td>
+<td align="right">20</td>
+<td align="right">4</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="right">1993</td>
+<td align="right">100</td>
+<td align="right">17</td>
+<td align="right">2</td>
+<td align="right">81</td>
+<td align="right">4</td>
+<td align="right">3</td>
+</tr>
+<tr class="odd">
+<td align="right">1994</td>
+<td align="right">32</td>
+<td align="right">12</td>
+<td align="right">2</td>
+<td align="right">18</td>
+<td align="right">1</td>
+<td align="right">4</td>
+</tr>
+<tr class="even">
+<td align="right">1995</td>
+<td align="right">109</td>
+<td align="right">6</td>
+<td align="right">1</td>
+<td align="right">102</td>
+<td align="right">39</td>
+<td align="right">7</td>
+</tr>
+<tr class="odd">
+<td align="right">1996</td>
+<td align="right">70</td>
+<td align="right">13</td>
+<td align="right">2</td>
+<td align="right">55</td>
+<td align="right">25</td>
+<td align="right">57</td>
+</tr>
+<tr class="even">
+<td align="right">1997</td>
+<td align="right">56</td>
+<td align="right">19</td>
+<td align="right">3</td>
+<td align="right">34</td>
+<td align="right">12</td>
+<td align="right">3</td>
+</tr>
+<tr class="odd">
+<td align="right">1998</td>
+<td align="right">34</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">30</td>
+<td align="right">6</td>
+<td align="right">30</td>
+</tr>
+<tr class="even">
+<td align="right">1999</td>
+<td align="right">154</td>
+<td align="right">5</td>
+<td align="right">1</td>
+<td align="right">148</td>
+<td align="right">23</td>
+<td align="right">12</td>
+</tr>
+<tr class="odd">
+<td align="right">2000</td>
+<td align="right">53</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">53</td>
+<td align="right">4</td>
+<td align="right">33</td>
+</tr>
+</tbody>
+</table>
+<p>For each year <span class="math inline">\(t\)</span> from <span class="math inline">\(1984\)</span> to <span class="math inline">\(2000\)</span>, <span class="math inline">\(y_{1,t}\)</span> denotes the number of fish
+trapped at the Cerisel station (close to the mouth of the river). <span class="math inline">\(y_{2,t}+y_{3,t}\)</span> individuals from the
+captured ones are not replaced upstream, either because they died during
+manipulation or because they are removed for experimental use or for
+hatchery production. Let <span class="math inline">\(y_{4,t}=y_{1,t}-(y_{2,t}+y_{3,t})\)</span> the
+number of (tagged) fish released. These spawners are individually marked
+before they keep on swimming upstream . The recapture sample is gathered
+during and after spawning (see more details on recapture conditions
+hereafter). Let us denote as <span class="math inline">\(y_{5,t}\)</span> and <span class="math inline">\(y_{6,t}\)</span> the number of marked and unmarked
+fish among recaptured fish, respectively.</p>
+<center>
+<div class="figure">
+<img src="figures/CmrOir/CeriselTrap.png" style="width:80.0%;height:80.0%" alt=""><p class="caption">Figure 2 – Schame of the Cerisel trapping facility
+(Oir river, Normandy, France) working as a double downstream (for smolt
+runs) and upstream (for spawner runs) partial counting fence. The black
+circles at the top of the figure indicates the release site of tagged
+smolts and spawners. The release site and the downstream trap are 1 km
+away from each other.</p>
+</div>
+</center>
+</div>
+<div class="section level2">
+<h2 id="modeling">Modeling<a class="anchor" aria-label="anchor" href="#modeling"></a>
+</h2>
+<div class="section level3">
+<h3 id="observation-submodels-for-the-first-phace-cerisel-trapping-place">Observation submodels for the first phace (Cerisel trapping
+place)<a class="anchor" aria-label="anchor" href="#observation-submodels-for-the-first-phace-cerisel-trapping-place"></a>
+</h3>
+<p>Let,</p>
+<ul>
+<li>
+<span class="math inline">\(\nu_t\)</span> be the population size of
+spawners at year <span class="math inline">\(t\)</span>
+</li>
+<li>
+<span class="math inline">\(\pi_t^1\)</span> be the unknown trapping
+efficiency,</li>
+</ul>
+<p>and assume all of the <span class="math inline">\(\nu_t\)</span>
+spawners are independently and equally catchable in the trop with a
+probability <span class="math inline">\(\pi^1_t\)</span> constant over
+the migration season. Then, the number of fish trrapped at the counting
+fence during migration time is the result of a Binomial experiment:</p>
+<ul>
+<li>
+<span class="math inline">\(y_{1,t} \sim Binomial(\nu_t,
+pi^1_t)\)</span>.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="observation-submodels-for-the-second-phase-re-collection-during-and-after-spawning">Observation submodels for the second phase (re-collection during and
+after spawning)<a class="anchor" aria-label="anchor" href="#observation-submodels-for-the-second-phase-re-collection-during-and-after-spawning"></a>
+</h3>
+<p>The recapture sample is obtrainged by three methods: electrofishing
+on the spawning grounds, collection of dead fish after spawning, and
+trapping of spent fish at the downstram trap of the Cerisel facility.
+Modeling recapture with Binomial experiments with effeciency <span class="math inline">\(\pi^2_t\)</span> is reasonable assuming the three
+following hypotheses: No spawner runs downstream after getting over the
+trap (<span class="math inline">\(H1\)</span>); there is no tag shedding
+(<span class="math inline">\(H2\)</span>); the recapture probability
+<span class="math inline">\(\pi_{t}^{2}\)</span> is the same for all the
+fish whether or not marked (<span class="math inline">\(H3\)</span>):</p>
+<ul>
+<li><span class="math inline">\(y_{5,t} \sim Binomial(y_{4,t},
+\pi^2_t)\)</span></li>
+<li><span class="math inline">\(y_{6,t} \sim Binomial(\nu_t - y_{1,t},
+\pi^2_t)\)</span></li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="latent-layers">Latent layers<a class="anchor" aria-label="anchor" href="#latent-layers"></a>
+</h3>
+<p>Let <span class="math inline">\(Z_t = (\nu_t, \pi^1_t,
+\pi^2_t)\)</span> be the latent vector and <span class="math inline">\(y_t = (y_{1,t}, y_{5,t}, y_{6,t})\)</span> the
+observations. The natural choice for the latent distributions are the
+Beta distribtion for <span class="math inline">\(\pi^1_t\)</span> and
+<span class="math inline">\(\pi^2_t\)</span> and the Negative Binomial
+ditribution for <span class="math inline">\(\nu_t\)</span>:</p>
+<ul>
+<li><span class="math inline">\(\pi^1_t \sim Beta(a_1,
+b_1)\)</span></li>
+<li><span class="math inline">\(\pi^2_t \sim Beta(a_2,
+b_2)\)</span></li>
+<li><span class="math inline">\(\nu_t \sim
+NegBinomial(c,d)\)</span></li>
+</ul>
+<center>
+<div class="figure">
+<img src="figures/CmrOir/DAG_CMR_Oir_Hierarchical.png" style="width:80.0%;height:80.0%" alt=""><p class="caption">Figure 3 – Directed Acyclic Graph representation of
+the hierarchical structure for the joint modeling of
+capture-mark-recapture experiments for the 17 years.</p>
+</div>
+</center>
+<p>We assign a diffuse prior distribution to the higher level parameters
+<span class="math inline">\(\theta = (a_1, a_2, b_1, b_2, c, d)\)</span>
+to reflect some ignorance about them. We use the following transform
+which recovers well understood meaning. For the trapping efficiency:</p>
+<ul>
+<li>
+<span class="math inline">\(\mu_{a,b} = \frac{a}{a+b}\)</span> is
+the mean of the Beta distribution, with <span class="math inline">\(\mu_{a,b} \sim Beta(1.5, 1.5)\)</span>
+</li>
+<li>
+<span class="math inline">\(u_{a,b} = a+b\)</span> can be
+interpreted as a prior sample size that scale the variance of the Beta
+distribution, with <span class="math inline">\(\log(u_{a,b} \sim
+Uniform(0,10)\)</span>).</li>
+</ul>
+<p>For the number of spawners:</p>
+<ul>
+<li>
+<span class="math inline">\(\mu_{c,d} = \frac{c}{d}\)</span> is the
+mean of the Negative Binomial distribution, with <span class="math inline">\(\mu_{c,d} \sim Uniform(0, \mu_{max})\)</span>,
+where <span class="math inline">\(\mu_{max} = 3000\)</span> fish.</li>
+<li>
+<span class="math inline">\(\sigma^2_{c,d} =
+\frac{c(d+1)}{d^2}\)</span> is the variance of the Negative Binomial
+distrution, with <span class="math inline">\(\log(\sigma_{c,d}) \sim
+Uniform(\log(\mu_{c,d}), \log(\sigma^2_{max}))\)</span>, where <span class="math inline">\(\sigma^2_{max} = 12\)</span> since we do not
+believe that the standard deviation might exceed <span class="math inline">\(400\)</span> fish.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="independent-modeling">Independent modeling<a class="anchor" aria-label="anchor" href="#independent-modeling"></a>
+</h3>
+<p>To show how a transfer of information between years is organized by
+the hierarchical model, we compare its results with the model assuming
+independence between years. For the models with independence,
+independent prior distributions with known parameters were set on <span class="math inline">\((\nu_{t},\pi_{t}% ^{1},\pi_{t}^{2})\)</span>:</p>
+<ul>
+<li><span class="math inline">\(\pi_{t}^{1} \; \sim \;
+Beta(1.5,1.5)\)</span></li>
+<li><span class="math inline">\(\pi_{t}^{2} \; \sim \;
+Beta(1.5,1.5)\)</span></li>
+<li><span class="math inline">\(\nu_{t} \; \sim \;
+Uniform(1,3000)\)</span></li>
+</ul>
+</div>
+</div>
+<div class="section level2">
+<h2 id="implementation-results-and-analysis">Implementation, results and analysis<a class="anchor" aria-label="anchor" href="#implementation-results-and-analysis"></a>
+</h2>
+<div class="section level3">
+<h3 id="independent-model">Independent model<a class="anchor" aria-label="anchor" href="#independent-model"></a>
+</h3>
+<p>The model can be written in <code>rjags</code> as the following
+string:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ind_model_str</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<span><span class="st">  model { </span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    # N = 17 years (1984 to 2000)</span></span>
+<span><span class="st">    pnu &lt;- rep(1, 3000)</span></span>
+<span><span class="st">    for (i in 1:N)</span></span>
+<span><span class="st">      {</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Prior for trapping efficiency pi1</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      pi1[i] ~ dbeta(1.5,1.5)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Prior for recapture efficiency pi2</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      pi2[i] ~ dbeta(1.5,1.5)</span></span>
+<span><span class="st">      nu[i] ~ dcat(pnu[])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Escapement (number of fish that mate)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      Nsp[i] &lt;- max(nu[i]-y2[i]-y3[i],0)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Number of unmarked fish</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      nm[i] &lt;- max(nu[i]-y1[i],0)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      #  Likelihood (binomial for capture and recapture)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      y1[i] ~ dbin(pi1[i],nu[i])</span></span>
+<span><span class="st">      y6[i] ~ dbin(pi2[i],nm[i])</span></span>
+<span><span class="st">      y5[i] ~ dbin(pi2[i],y4[i])</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">} # end of loop on year i</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">} # end of model"</span></span></code></pre></div>
+<p>And we fix the following initialization points for each of the three
+chains.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ind_init</span> <span class="op">&lt;-</span> </span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pi1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>,<span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">300</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pi1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.2</span>,<span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">500</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pi1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.8</span>,<span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1000</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ind_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">ind_model_str</span><span class="op">)</span>, </span>
+<span>                    data <span class="op">=</span> <span class="va">CmrOir</span>, inits <span class="op">=</span> <span class="va">ind_init</span>,</span>
+<span>                    n.chains <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Compiling model graph</span></span>
+<span><span class="co">#&gt;    Resolving undeclared variables</span></span>
+<span><span class="co">#&gt;    Allocating nodes</span></span>
+<span><span class="co">#&gt; Graph information:</span></span>
+<span><span class="co">#&gt;    Observed stochastic nodes: 51</span></span>
+<span><span class="co">#&gt;    Unobserved stochastic nodes: 51</span></span>
+<span><span class="co">#&gt;    Total graph size: 244</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Initializing model</span></span>
+<span></span>
+<span><span class="co"># Inferences</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">ind_model</span>, n.iter <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
+<span><span class="va">posterior_sample_ind</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span><span class="va">ind_model</span>,</span>
+<span>                       variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pi1"</span>, <span class="st">"pi2"</span>, <span class="st">"nu"</span><span class="op">)</span>,</span>
+<span>                       n.iter <span class="op">=</span> <span class="fl">10000</span>,</span>
+<span>                       thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
+<div class="section level4">
+<h4 id="diagnostic">Diagnostic<a class="anchor" aria-label="anchor" href="#diagnostic"></a>
+</h4>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">posterior_sample_ind</span><span class="op">)</span>,</span>
+<span>                <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">default_convergence_measures</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left">variable</th>
+<th align="right">rhat</th>
+<th align="right">ess_bulk</th>
+<th align="right">ess_tail</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">nu[1]</td>
+<td align="right">1.0000275</td>
+<td align="right">2722.9622</td>
+<td align="right">2843.466</td>
+</tr>
+<tr class="even">
+<td align="left">nu[2]</td>
+<td align="right">0.9999059</td>
+<td align="right">3040.2594</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[3]</td>
+<td align="right">1.0014359</td>
+<td align="right">1111.3122</td>
+<td align="right">2271.524</td>
+</tr>
+<tr class="even">
+<td align="left">nu[4]</td>
+<td align="right">1.0001825</td>
+<td align="right">1716.4302</td>
+<td align="right">2701.109</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[5]</td>
+<td align="right">0.9998233</td>
+<td align="right">1165.9253</td>
+<td align="right">1934.622</td>
+</tr>
+<tr class="even">
+<td align="left">nu[6]</td>
+<td align="right">1.0014739</td>
+<td align="right">2786.8221</td>
+<td align="right">2942.996</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[7]</td>
+<td align="right">1.0003198</td>
+<td align="right">1801.0591</td>
+<td align="right">2173.663</td>
+</tr>
+<tr class="even">
+<td align="left">nu[8]</td>
+<td align="right">1.0005657</td>
+<td align="right">2903.7057</td>
+<td align="right">2833.866</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[9]</td>
+<td align="right">1.0012352</td>
+<td align="right">2011.3806</td>
+<td align="right">2398.957</td>
+</tr>
+<tr class="even">
+<td align="left">nu[10]</td>
+<td align="right">1.0048088</td>
+<td align="right">847.7414</td>
+<td align="right">1835.394</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[11]</td>
+<td align="right">1.0011371</td>
+<td align="right">1438.7932</td>
+<td align="right">2028.810</td>
+</tr>
+<tr class="even">
+<td align="left">nu[12]</td>
+<td align="right">1.0012919</td>
+<td align="right">2908.8344</td>
+<td align="right">2720.410</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[13]</td>
+<td align="right">0.9998097</td>
+<td align="right">2513.0659</td>
+<td align="right">2702.096</td>
+</tr>
+<tr class="even">
+<td align="left">nu[14]</td>
+<td align="right">1.0005352</td>
+<td align="right">2475.2740</td>
+<td align="right">2747.043</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[15]</td>
+<td align="right">0.9998147</td>
+<td align="right">1929.5109</td>
+<td align="right">2684.428</td>
+</tr>
+<tr class="even">
+<td align="left">nu[16]</td>
+<td align="right">0.9997637</td>
+<td align="right">2156.9774</td>
+<td align="right">2453.014</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[17]</td>
+<td align="right">1.0000634</td>
+<td align="right">2817.6924</td>
+<td align="right">2744.719</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[1]</td>
+<td align="right">1.0000157</td>
+<td align="right">2625.0594</td>
+<td align="right">2949.204</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[2]</td>
+<td align="right">1.0007272</td>
+<td align="right">3005.9967</td>
+<td align="right">2913.552</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[3]</td>
+<td align="right">1.0015786</td>
+<td align="right">1157.2237</td>
+<td align="right">2014.169</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[4]</td>
+<td align="right">1.0004113</td>
+<td align="right">1898.2080</td>
+<td align="right">2319.806</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[5]</td>
+<td align="right">0.9998026</td>
+<td align="right">1173.1780</td>
+<td align="right">1794.060</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[6]</td>
+<td align="right">1.0001461</td>
+<td align="right">2762.7184</td>
+<td align="right">2828.830</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[7]</td>
+<td align="right">1.0007564</td>
+<td align="right">1920.8444</td>
+<td align="right">2302.140</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[8]</td>
+<td align="right">1.0003923</td>
+<td align="right">2868.2410</td>
+<td align="right">2942.923</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[9]</td>
+<td align="right">1.0013540</td>
+<td align="right">2242.5690</td>
+<td align="right">2356.078</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[10]</td>
+<td align="right">1.0056313</td>
+<td align="right">818.9673</td>
+<td align="right">1989.414</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[11]</td>
+<td align="right">1.0010408</td>
+<td align="right">1457.2793</td>
+<td align="right">1970.624</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[12]</td>
+<td align="right">1.0000269</td>
+<td align="right">2833.0143</td>
+<td align="right">2850.278</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[13]</td>
+<td align="right">1.0001350</td>
+<td align="right">2644.6980</td>
+<td align="right">2717.095</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[14]</td>
+<td align="right">1.0013019</td>
+<td align="right">2554.0145</td>
+<td align="right">2843.806</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[15]</td>
+<td align="right">1.0001578</td>
+<td align="right">2022.8593</td>
+<td align="right">2603.380</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[16]</td>
+<td align="right">0.9998183</td>
+<td align="right">2208.6747</td>
+<td align="right">2809.895</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[17]</td>
+<td align="right">1.0002687</td>
+<td align="right">2932.9579</td>
+<td align="right">2947.027</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[1]</td>
+<td align="right">1.0000321</td>
+<td align="right">2973.4745</td>
+<td align="right">2792.862</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[2]</td>
+<td align="right">1.0027007</td>
+<td align="right">2397.6039</td>
+<td align="right">2840.864</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[3]</td>
+<td align="right">1.0018123</td>
+<td align="right">1891.0072</td>
+<td align="right">2424.346</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[4]</td>
+<td align="right">0.9998743</td>
+<td align="right">1777.2869</td>
+<td align="right">2571.974</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[5]</td>
+<td align="right">1.0000755</td>
+<td align="right">2821.5197</td>
+<td align="right">2610.102</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[6]</td>
+<td align="right">1.0030795</td>
+<td align="right">2909.3852</td>
+<td align="right">2986.800</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[7]</td>
+<td align="right">0.9997955</td>
+<td align="right">1807.1318</td>
+<td align="right">2065.673</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[8]</td>
+<td align="right">1.0002430</td>
+<td align="right">2820.2766</td>
+<td align="right">2989.555</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[9]</td>
+<td align="right">1.0007210</td>
+<td align="right">2503.6660</td>
+<td align="right">2756.831</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[10]</td>
+<td align="right">1.0035276</td>
+<td align="right">1366.5716</td>
+<td align="right">2322.511</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[11]</td>
+<td align="right">0.9999904</td>
+<td align="right">1765.6578</td>
+<td align="right">2326.819</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[12]</td>
+<td align="right">1.0007236</td>
+<td align="right">3046.6175</td>
+<td align="right">2990.490</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[13]</td>
+<td align="right">0.9994845</td>
+<td align="right">2511.4872</td>
+<td align="right">2786.145</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[14]</td>
+<td align="right">1.0004210</td>
+<td align="right">2536.9904</td>
+<td align="right">2987.334</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[15]</td>
+<td align="right">1.0003628</td>
+<td align="right">2099.2225</td>
+<td align="right">2356.478</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[16]</td>
+<td align="right">1.0005543</td>
+<td align="right">2775.9708</td>
+<td align="right">2256.804</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[17]</td>
+<td align="right">1.0004302</td>
+<td align="right">2946.4083</td>
+<td align="right">2744.096</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section level3">
+<h3 id="hierarchical-model">Hierarchical model<a class="anchor" aria-label="anchor" href="#hierarchical-model"></a>
+</h3>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hier_model_str</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<span><span class="st">  model { </span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    # N = 17 years (1984 to 2000)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Hyperprior for thetrapping efficiency</span></span>
+<span><span class="st">    mu1_ab ~ dbeta(1.5, 1.5)</span></span>
+<span><span class="st">    log_u1_ab ~ dunif(0,10)</span></span>
+<span><span class="st">    u1_ab &lt;- exp(log_u1_ab)</span></span>
+<span><span class="st">    alpha1 &lt;- mu1_ab * u1_ab</span></span>
+<span><span class="st">    beta1 &lt;- (1-mu1_ab)*u1_ab</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Hyperprior for the recapture efficiency</span></span>
+<span><span class="st">    mu2_ab ~ dbeta(1.5, 1.5)</span></span>
+<span><span class="st">    log_u2_ab ~ dunif(0,10)</span></span>
+<span><span class="st">    u2_ab &lt;- exp(log_u2_ab)</span></span>
+<span><span class="st">    alpha2 &lt;- mu2_ab * u2_ab</span></span>
+<span><span class="st">    beta2 &lt;- (1-mu2_ab)*u2_ab</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Hyperperior for nu_max</span></span>
+<span><span class="st">    pmunu &lt;- rep(1, 3000)</span></span>
+<span><span class="st">    mu_nu ~ dcat(pmunu)</span></span>
+<span><span class="st">    inf_log_sig2_nu &lt;- log(mu_nu)</span></span>
+<span><span class="st">    log_sig2_nu ~ dunif(inf_log_sig2_nu, 12)</span></span>
+<span><span class="st">    sig2_nu &lt;- exp(log_sig2_nu)</span></span>
+<span><span class="st">    p &lt;- mu_nu/sig2_nu  # d =  p/(1-p)</span></span>
+<span><span class="st">    c &lt;- mu_nu * p*(1-p)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Predictive distributions</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    pi1_pred ~ dbeta(alpha1, beta1)</span></span>
+<span><span class="st">    pi2_pred ~ dbeta(alpha2, beta2)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    nu_pred ~ dnegbin(p,c)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    for (i in 1:N)</span></span>
+<span><span class="st">      {</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Prior for trapping efficiency pi1</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      pi1[i] ~ dbeta(alpha1, beta1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Prior for recapture efficiency pi2</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      pi2[i] ~ dbeta(alpha2, beta2)</span></span>
+<span><span class="st">      nu[i] ~ dnegbin(p,c)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Escapement (number of fish that mate)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      Nsp[i] &lt;- max(nu[i]-y2[i]-y3[i],0)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      # Number of unmarked fish</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      nm[i] &lt;- max(nu[i]-y1[i],0)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      #  Likelihood (binomial for capture and recapture)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">      y1[i] ~ dbin(pi1[i],nu[i])</span></span>
+<span><span class="st">      y6[i] ~ dbin(pi2[i],nm[i])</span></span>
+<span><span class="st">      y5[i] ~ dbin(pi2[i],y4[i])</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">} # end of loop on year i</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">} # end of model"</span></span></code></pre></div>
+<p>And we fix the following initialization points for each of the three
+chains.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hier_init</span> <span class="op">&lt;-</span> </span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pi1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi1_pred <span class="op">=</span> <span class="fl">.5</span>, mu1_ab <span class="op">=</span> <span class="fl">.6</span>,  log_u1_ab <span class="op">=</span> <span class="fl">.6</span>,</span>
+<span>       pi2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi2_pred <span class="op">=</span> <span class="fl">.2</span>, mu2_ab <span class="op">=</span> <span class="fl">.6</span>,  log_u2_ab <span class="op">=</span> <span class="fl">.6</span>, </span>
+<span>       nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">300</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, nu_pred <span class="op">=</span> <span class="fl">300</span>, mu_nu <span class="op">=</span> <span class="fl">10</span>, log_sig2_nu <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pi1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.2</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi1_pred <span class="op">=</span> <span class="fl">.2</span>, mu1_ab <span class="op">=</span> <span class="fl">.5</span>,  log_u1_ab <span class="op">=</span> <span class="fl">.25</span>,</span>
+<span>       pi2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi2_pred <span class="op">=</span> <span class="fl">.2</span>, mu2_ab <span class="op">=</span> <span class="fl">.5</span>,  log_u2_ab <span class="op">=</span> <span class="fl">.25</span>, </span>
+<span>       nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">500</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, nu_pred <span class="op">=</span> <span class="fl">500</span>, mu_nu <span class="op">=</span> <span class="fl">50</span>, log_sig2_nu <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pi1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.8</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi1_pred <span class="op">=</span> <span class="fl">.5</span>, mu1_ab <span class="op">=</span> <span class="fl">.5</span>,  log_u1_ab <span class="op">=</span> <span class="fl">.25</span>,</span>
+<span>       pi2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">.5</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, pi2_pred <span class="op">=</span> <span class="fl">.5</span>, mu2_ab <span class="op">=</span> <span class="fl">.5</span>,  log_u2_ab <span class="op">=</span> <span class="fl">.25</span>, </span>
+<span>       nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1000</span>, <span class="va">CmrOir</span><span class="op">$</span><span class="va">N</span><span class="op">)</span>, nu_pred <span class="op">=</span> <span class="fl">1000</span>, mu_nu <span class="op">=</span> <span class="fl">100</span>, log_sig2_nu <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hier_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">hier_model_str</span><span class="op">)</span>, </span>
+<span>                    data <span class="op">=</span> <span class="va">CmrOir</span>, inits <span class="op">=</span> <span class="va">hier_init</span>,</span>
+<span>                    n.chains <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Compiling model graph</span></span>
+<span><span class="co">#&gt;    Resolving undeclared variables</span></span>
+<span><span class="co">#&gt;    Allocating nodes</span></span>
+<span><span class="co">#&gt; Graph information:</span></span>
+<span><span class="co">#&gt;    Observed stochastic nodes: 51</span></span>
+<span><span class="co">#&gt;    Unobserved stochastic nodes: 60</span></span>
+<span><span class="co">#&gt;    Total graph size: 268</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Initializing model</span></span>
+<span></span>
+<span><span class="co"># Inferences</span></span>
+<span><span class="va">pars</span> <span class="op">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pi1"</span>, <span class="st">"pi1_pred"</span>, <span class="st">"mu1_ab"</span>, <span class="st">"u1_ab"</span>,</span>
+<span>           <span class="st">"pi2"</span>, <span class="st">"pi2_pred"</span>, <span class="st">"mu2_ab"</span>, <span class="st">"u2_ab"</span>, </span>
+<span>           <span class="st">"nu"</span>, <span class="st">"nu_pred"</span>, <span class="st">"mu_nu"</span>, <span class="st">"log_sig2_nu"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">hier_model</span>, n.iter <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
+<span><span class="va">posterior_sample_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span><span class="va">hier_model</span>,</span>
+<span>                       variable.names <span class="op">=</span> <span class="va">pars</span>,</span>
+<span>                       n.iter <span class="op">=</span> <span class="fl">10000</span>,</span>
+<span>                       thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
+<div class="section level4">
+<h4 id="diagnostic-1">Diagnostic<a class="anchor" aria-label="anchor" href="#diagnostic-1"></a>
+</h4>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">posterior_sample_hier</span><span class="op">)</span>,</span>
+<span>                <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">default_convergence_measures</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left">variable</th>
+<th align="right">rhat</th>
+<th align="right">ess_bulk</th>
+<th align="right">ess_tail</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">log_sig2_nu</td>
+<td align="right">1.0011703</td>
+<td align="right">2161.4949</td>
+<td align="right">2662.933</td>
+</tr>
+<tr class="even">
+<td align="left">mu1_ab</td>
+<td align="right">1.0013611</td>
+<td align="right">2585.7204</td>
+<td align="right">2768.848</td>
+</tr>
+<tr class="odd">
+<td align="left">mu2_ab</td>
+<td align="right">0.9996916</td>
+<td align="right">2780.7823</td>
+<td align="right">2881.718</td>
+</tr>
+<tr class="even">
+<td align="left">mu_nu</td>
+<td align="right">1.0005089</td>
+<td align="right">2140.4840</td>
+<td align="right">2902.795</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[1]</td>
+<td align="right">1.0008213</td>
+<td align="right">1428.4493</td>
+<td align="right">1888.633</td>
+</tr>
+<tr class="even">
+<td align="left">nu[2]</td>
+<td align="right">1.0070667</td>
+<td align="right">1556.3074</td>
+<td align="right">2091.867</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[3]</td>
+<td align="right">1.0002390</td>
+<td align="right">1286.5905</td>
+<td align="right">1874.551</td>
+</tr>
+<tr class="even">
+<td align="left">nu[4]</td>
+<td align="right">1.0016310</td>
+<td align="right">1920.7989</td>
+<td align="right">2528.515</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[5]</td>
+<td align="right">1.0012100</td>
+<td align="right">1157.9237</td>
+<td align="right">1753.278</td>
+</tr>
+<tr class="even">
+<td align="left">nu[6]</td>
+<td align="right">1.0004355</td>
+<td align="right">2524.1185</td>
+<td align="right">2730.624</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[7]</td>
+<td align="right">1.0003017</td>
+<td align="right">1617.2742</td>
+<td align="right">2227.991</td>
+</tr>
+<tr class="even">
+<td align="left">nu[8]</td>
+<td align="right">1.0004321</td>
+<td align="right">2827.8613</td>
+<td align="right">2830.289</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[9]</td>
+<td align="right">1.0006394</td>
+<td align="right">1682.9307</td>
+<td align="right">2215.920</td>
+</tr>
+<tr class="even">
+<td align="left">nu[10]</td>
+<td align="right">1.0021066</td>
+<td align="right">1108.5685</td>
+<td align="right">1661.097</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[11]</td>
+<td align="right">1.0027054</td>
+<td align="right">908.4027</td>
+<td align="right">1778.212</td>
+</tr>
+<tr class="even">
+<td align="left">nu[12]</td>
+<td align="right">1.0008072</td>
+<td align="right">2851.3229</td>
+<td align="right">2773.775</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[13]</td>
+<td align="right">1.0001364</td>
+<td align="right">2512.2273</td>
+<td align="right">2812.615</td>
+</tr>
+<tr class="even">
+<td align="left">nu[14]</td>
+<td align="right">1.0002872</td>
+<td align="right">2836.7867</td>
+<td align="right">2608.815</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[15]</td>
+<td align="right">1.0011570</td>
+<td align="right">1875.9425</td>
+<td align="right">2547.477</td>
+</tr>
+<tr class="even">
+<td align="left">nu[16]</td>
+<td align="right">1.0007082</td>
+<td align="right">2241.5236</td>
+<td align="right">2344.376</td>
+</tr>
+<tr class="odd">
+<td align="left">nu[17]</td>
+<td align="right">1.0001409</td>
+<td align="right">1826.6559</td>
+<td align="right">2111.775</td>
+</tr>
+<tr class="even">
+<td align="left">nu_pred</td>
+<td align="right">1.0012970</td>
+<td align="right">2612.3068</td>
+<td align="right">2862.562</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[1]</td>
+<td align="right">1.0005689</td>
+<td align="right">1405.3186</td>
+<td align="right">1891.585</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[2]</td>
+<td align="right">1.0069034</td>
+<td align="right">1541.5277</td>
+<td align="right">2079.994</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[3]</td>
+<td align="right">1.0007767</td>
+<td align="right">1275.9963</td>
+<td align="right">1891.444</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[4]</td>
+<td align="right">1.0019795</td>
+<td align="right">2014.6825</td>
+<td align="right">2599.683</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[5]</td>
+<td align="right">1.0015080</td>
+<td align="right">1145.5561</td>
+<td align="right">1603.651</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[6]</td>
+<td align="right">1.0011057</td>
+<td align="right">2551.2447</td>
+<td align="right">2485.273</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[7]</td>
+<td align="right">0.9995676</td>
+<td align="right">1819.1018</td>
+<td align="right">2244.664</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[8]</td>
+<td align="right">1.0007268</td>
+<td align="right">2433.9604</td>
+<td align="right">2954.829</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[9]</td>
+<td align="right">0.9998768</td>
+<td align="right">1711.2429</td>
+<td align="right">2274.722</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[10]</td>
+<td align="right">1.0021230</td>
+<td align="right">1133.3032</td>
+<td align="right">1722.915</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[11]</td>
+<td align="right">1.0012483</td>
+<td align="right">936.1172</td>
+<td align="right">1803.710</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[12]</td>
+<td align="right">1.0010282</td>
+<td align="right">2842.0583</td>
+<td align="right">2987.517</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[13]</td>
+<td align="right">0.9998348</td>
+<td align="right">2683.4842</td>
+<td align="right">2948.752</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[14]</td>
+<td align="right">1.0004940</td>
+<td align="right">2841.9879</td>
+<td align="right">2515.329</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[15]</td>
+<td align="right">1.0000191</td>
+<td align="right">2041.4608</td>
+<td align="right">2392.065</td>
+</tr>
+<tr class="even">
+<td align="left">pi1[16]</td>
+<td align="right">1.0001733</td>
+<td align="right">2268.1756</td>
+<td align="right">2201.990</td>
+</tr>
+<tr class="odd">
+<td align="left">pi1[17]</td>
+<td align="right">1.0002587</td>
+<td align="right">1866.8381</td>
+<td align="right">1892.570</td>
+</tr>
+<tr class="even">
+<td align="left">pi1_pred</td>
+<td align="right">1.0005344</td>
+<td align="right">3056.8073</td>
+<td align="right">3016.573</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[1]</td>
+<td align="right">1.0009735</td>
+<td align="right">2012.3511</td>
+<td align="right">2799.886</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[2]</td>
+<td align="right">1.0004630</td>
+<td align="right">2784.8202</td>
+<td align="right">2779.897</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[3]</td>
+<td align="right">1.0011440</td>
+<td align="right">2020.1985</td>
+<td align="right">2618.630</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[4]</td>
+<td align="right">1.0022660</td>
+<td align="right">1909.8782</td>
+<td align="right">2723.657</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[5]</td>
+<td align="right">1.0008028</td>
+<td align="right">2822.0818</td>
+<td align="right">2946.185</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[6]</td>
+<td align="right">1.0004115</td>
+<td align="right">2716.0580</td>
+<td align="right">2722.485</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[7]</td>
+<td align="right">1.0002470</td>
+<td align="right">1595.0530</td>
+<td align="right">1981.365</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[8]</td>
+<td align="right">1.0001957</td>
+<td align="right">3220.7581</td>
+<td align="right">2521.129</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[9]</td>
+<td align="right">1.0007613</td>
+<td align="right">2105.9045</td>
+<td align="right">2753.997</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[10]</td>
+<td align="right">1.0021802</td>
+<td align="right">1884.0862</td>
+<td align="right">2441.954</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[11]</td>
+<td align="right">1.0004776</td>
+<td align="right">1317.4789</td>
+<td align="right">2191.944</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[12]</td>
+<td align="right">1.0005222</td>
+<td align="right">3020.8960</td>
+<td align="right">2878.515</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[13]</td>
+<td align="right">1.0036471</td>
+<td align="right">2589.4817</td>
+<td align="right">2829.323</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[14]</td>
+<td align="right">1.0013939</td>
+<td align="right">2775.9977</td>
+<td align="right">2729.199</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[15]</td>
+<td align="right">1.0014423</td>
+<td align="right">1882.4381</td>
+<td align="right">2286.799</td>
+</tr>
+<tr class="even">
+<td align="left">pi2[16]</td>
+<td align="right">1.0004149</td>
+<td align="right">2664.7737</td>
+<td align="right">2865.306</td>
+</tr>
+<tr class="odd">
+<td align="left">pi2[17]</td>
+<td align="right">1.0006307</td>
+<td align="right">1952.2001</td>
+<td align="right">2457.842</td>
+</tr>
+<tr class="even">
+<td align="left">pi2_pred</td>
+<td align="right">1.0006593</td>
+<td align="right">2809.3270</td>
+<td align="right">2639.450</td>
+</tr>
+<tr class="odd">
+<td align="left">u1_ab</td>
+<td align="right">1.0013416</td>
+<td align="right">2698.4677</td>
+<td align="right">2825.837</td>
+</tr>
+<tr class="even">
+<td align="left">u2_ab</td>
+<td align="right">0.9995084</td>
+<td align="right">2800.7887</td>
+<td align="right">2948.172</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section level3">
+<h3 id="results-and-analysis">Results and analysis<a class="anchor" aria-label="anchor" href="#results-and-analysis"></a>
+</h3>
+<p>We extract the results of both model into long form and wide form
+data frames.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfl_ind</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">posterior_sample_ind</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Model <span class="op">=</span> <span class="st">"Independent"</span><span class="op">)</span></span>
+<span><span class="va">dfw_ind</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">posterior_sample_ind</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Model <span class="op">=</span> <span class="st">"Independent"</span><span class="op">)</span></span>
+<span><span class="va">dfl_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">posterior_sample_hier</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Model <span class="op">=</span> <span class="st">"Hierarchical"</span><span class="op">)</span></span>
+<span><span class="va">dfw_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">posterior_sample_hier</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Model <span class="op">=</span> <span class="st">"Hierarchical"</span><span class="op">)</span></span></code></pre></div>
+<div class="section level4">
+<h4 id="comparing-the-efficiency-and-number-of-spawners-distribution-for-both-models">Comparing the efficiency and number of spawners distribution for
+both models<a class="anchor" aria-label="anchor" href="#comparing-the-efficiency-and-number-of-spawners-distribution-for-both-models"></a>
+</h4>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfl_ind</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">dfl_hier</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^pi1\\."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Years <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">as.factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1984</span>,<span class="fl">2000</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="co"># 5 = length("pi1.") + 1</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Years</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">Model</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, outlier.size <span class="op">=</span> <span class="fl">.25</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_discrete.html" class="external-link">scale_x_discrete</a></span><span class="op">(</span>guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/guide_axis.html" class="external-link">guide_axis</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gray50"</span>, <span class="st">"gray90"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Trapping efficiency"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-exchangeable-cmr_files/figure-html/unnamed-chunk-5-1.png" width="700" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfl_ind</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">dfl_hier</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^pi2\\."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Years <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">as.factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1984</span>,<span class="fl">2000</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="co"># 5 = length("pi2.") + 1</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Years</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">Model</span> <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, outlier.size <span class="op">=</span> <span class="fl">.25</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_discrete.html" class="external-link">scale_x_discrete</a></span><span class="op">(</span>guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/guide_axis.html" class="external-link">guide_axis</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.75</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gray50"</span>, <span class="st">"gray90"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Recapture efficiency"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Removed 12 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
+<p><img src="hierarchical-exchangeable-cmr_files/figure-html/unnamed-chunk-6-1.png" width="700" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfl_ind</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">dfl_hier</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^nu\\."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Years <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">as.factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1984</span>,<span class="fl">2000</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="co"># 4 = length("nu.") + 1</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Years</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">Model</span> <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, outlier.size <span class="op">=</span> <span class="fl">.25</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_discrete.html" class="external-link">scale_x_discrete</a></span><span class="op">(</span>guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/guide_axis.html" class="external-link">guide_axis</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1000</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gray50"</span>, <span class="st">"gray90"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Spawners"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-exchangeable-cmr_files/figure-html/unnamed-chunk-7-1.png" width="700" style="display: block; margin: auto;"></p>
+<p>Results highlight that hierarchical modeling has no effect on the
+inferences on the capture efficiencies but gratly improve posterior
+inferences of psawners migrating back to the Oir River.</p>
+<p>Posterior mean values of the capture probabilities <span class="math inline">\(\pi_{t}^{1}\)</span> do not seem to shrink much
+toward their overall grand mean and the recapture probabilities <span class="math inline">\(\pi_{t}^{2}\)</span>’s are only slightly subjected
+to the shrinkage effect. There remains a lot of between-year variability
+in the experimental conditions at the Cerisel trapping facility.</p>
+<p>Conversely, the hierarchical structure hypothesized on <span class="math inline">\(\nu_{t}\)</span>’s strongly reduces the skewness
+and uncertainty in the estimation of the number of spawners. The grey
+boxplots clearly point out that the most precise inferences are obtained
+under the hierarchical model, especially for the years with sparse CMR
+data, <em>i.e.</em>, low number of marked released or, more importantly,
+low number of recaptures of previously marked fish yield (<em>e.g.</em>,
+years <span class="math inline">\(1987\)</span>, <span class="math inline">\(1990\)</span>, <span class="math inline">\(1994\)</span> and <span class="math inline">\(2000\)</span>). For this latter year, the upper
+bounds of the <span class="math inline">\(95\%\)</span> Bayesian
+credibility intervals obtained with the model assuming independence
+between years appears unrealistically high given the size of the Oir
+River and the available knowledge on the biology and ecology of Atlantic
+salmon as exemplified for year <span class="math inline">\(2000\)</span>.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw_ind</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">dfw_hier</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">`nu.17`</span>, linetype <span class="op">=</span> <span class="va">Model</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density.html" class="external-link">geom_density</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">xlim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1000</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Spawners"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">""</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-exchangeable-cmr_files/figure-html/unnamed-chunk-8-1.png" width="700" style="display: block; margin: auto;"></p>
+</div>
+<div class="section level4">
+<h4 id="posterior-predictive-of-the-hierarchical-model">Posterior predictive of the hierarchical model<a class="anchor" aria-label="anchor" href="#posterior-predictive-of-the-hierarchical-model"></a>
+</h4>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">posterior_sample_hier</span><span class="op">)</span>,</span>
+<span>                <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">default_summary_measures</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">variable</span>, <span class="st">"pred"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 7</span></span></span>
+<span><span class="co">#&gt;   variable    mean  median      sd    mad      q5     q95</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> nu_pred  185.    162     112.    94.9   47.0    395    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> pi1_pred   0.605   0.654   0.297  0.357  0.069<span style="text-decoration: underline;">5</span>   0.989</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> pi2_pred   0.213   0.182   0.146  0.135  0.031<span style="text-decoration: underline;">7</span>   0.494</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">par.labs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Spawners"</span>, <span class="st">"Trapping efficiency"</span>, </span>
+<span>              <span class="st">"Recapture efficiency"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">par.labs</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"nu_pred"</span>, <span class="st">"pi1_pred"</span>, <span class="st">"pi2_pred"</span><span class="op">)</span></span>
+<span><span class="va">dfl_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"pred"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">""</span><span class="op">)</span><span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">""</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span> <span class="op">~</span> <span class="va">parameter</span>, </span>
+<span>              scales <span class="op">=</span> <span class="st">"free"</span>, </span>
+<span>              labeller <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labeller.html" class="external-link">labeller</a></span><span class="op">(</span>parameter <span class="op">=</span> <span class="va">par.labs</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density.html" class="external-link">geom_density</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-exchangeable-cmr_files/figure-html/unnamed-chunk-10-1.png" width="700" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">mu1_ab</span>, <span class="va">u1_ab</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">mu1_ab</span>, y <span class="op">=</span> <span class="va">u1_ab</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density_2d.html" class="external-link">geom_density2d</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-exchangeable-cmr_files/figure-html/unnamed-chunk-11-1.png" width="700" style="display: block; margin: auto;"></p>
+<p>A straightforward result of the hierarchical model are the posterior
+predictive distributions of the trapping or recapture efficiencies and
+of the number of returns , denoted <span class="math inline">\([\pi^{1,new}|data_{1984:2000}]\)</span> and <span class="math inline">\([\pi^{2,new}|data_{1984:2000}]\)</span>, and <span class="math inline">\([\nu^{new}|data_{1984:2000}],\)</span>
+respectively. The posterior predictive of the recapture efficiency and
+of the returns are informative distributions. Thus, the data of all
+years combined allow discarding <em>a priori</em> the possibility of
+very high trapping efficiency (<em>i.e.</em>, greater than 0.5) or high
+spawner population size (<em>i.e.</em>, greater than a thousand) in any
+additional year.</p>
+<p>In-depth sensitivity analyses and another observation model for the
+recaptures can be found in <span class="citation">Rivot and Prévost (<a href="#ref-RivotPrevost2002" role="doc-biblioref">2002</a>)</span>.</p>
+</div>
+</div>
+</div>
+<div class="section level2">
+<h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-RivotPrevost2002" class="csl-entry">
+Rivot, E., and E. Prévost. 2002. <span>“Hierarchical
+<span>B</span>ayesian Analysis of Capture-Mark-Recapture Data.”</span>
+<em>Canadian Journal of Fisheries and Aquatic Sciences</em> 59: 1768–84.
+</div>
+</div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

@@ -1,0 +1,43 @@
+# ---------------------------------------
+# BUGS program for SPAWNER run estimation
+# "Independent" model
+
+# Chapter 9 - section 9.2
+# ---------------------------------------
+
+
+model
+{ 
+
+# Nyears = 17 years (1984 to 2000)
+
+for (i in 1:Nyears)
+{
+
+# Prior for trapping efficiency pi1
+
+pi1[i] ~ dbeta(1.5,1.5)
+
+# Prior for recapture efficiency pi2
+
+pi2[i] ~ dbeta(1.5,1.5)
+nu[i] ~ dunif(1,3000)
+
+# Escapement (number of fish that mate)
+
+Nsp[i] <- max(nu[i]-y2_plus_y3[i],0)
+
+# Number of unmarked fish
+
+nm[i] <- max(nu[i]-y1[i],0)
+
+#  Likelihood (binomial for capture and recapture)
+
+y1[i] ~ dbin(pi1[i],nu[i])
+y6[i] ~ dbin(pi2[i],nm[i])
+y5[i] ~ dbin(pi2[i],y4[i])
+	
+} # end of loop on year i
+
+} # end of model
+
