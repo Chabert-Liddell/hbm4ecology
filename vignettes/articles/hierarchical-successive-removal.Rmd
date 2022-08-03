@@ -482,8 +482,8 @@ Such a choice can be hypothesized for two reasons:
 * The convolution of a Poisson by a Gamma distribution makes a negative
 Binomial pdf, a common model for overdispersion in a
 counting experiment;
-* By setting $\beta_{AI_{i}}=f,\ \alpha_{AI{i}}=k\times f\times\delta_{i}%
-$, one can describe a variance increasing (linearly) with the mean since:
+* By setting $\beta_{AI_{i}}=f,\ \alpha_{AI{i}}=k\times f\times\delta_{i}$, 
+one can describe a variance increasing (linearly) with the mean since:
 
 \[
 \left\{
