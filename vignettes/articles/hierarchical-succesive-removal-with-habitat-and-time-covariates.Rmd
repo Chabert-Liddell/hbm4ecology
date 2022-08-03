@@ -1,6 +1,10 @@
 ---
-title: "Hierarchical Model for Successive Removal Data
-                     with Habitat and Time Covariates"
+title: "Hierarchical Model for Successive Removal Data with Habitat and Time Covariates"
+subtitle: "Jags code for chapter 10.1"
+bibliography: references.bib
+link-citations: TRUE
+resource_files:
+  - figures
 ---
 
 ```{r, include = FALSE}
@@ -10,6 +14,42 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
-library(hbm4ecology)
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  fig.align = "center",
+  fig.retina = 2,
+  comment = "#>"
+)
 ```
+
+```{r setup, message=FALSE}
+library(hbm4ecology)
+library(rjags)
+library(tidyverse)
+library(posterior)
+```
+
+# Data and model motivation
+
+The model is inspired from @Rivot2008. The example shows that Hierarchical 
+Bayesian Modeling (HBM) is flexible and effective for the treatment of successive
+removal catch data. We perform the
+estimation of the population of Atlantic salmon juveniles in the Oir River
+(France) with ten inventory sites sampled by one or two removals over the
+period 1985-2005 given in @Rivot2008. We show how to
+develop a general model to assess the effects of temporal variations and
+habitat type, on two latent quantities of interest: the density of fish and
+the probability of capture. Ecological expertise and Bayesian model comparison
+techniques are used to keep the model credible, parsimonious and realistic.
+Predictions of the total number of 0+ juveniles in the entire river reach can
+be derived, while accounting for all sources of uncertainty involved in this
+extrapolation. Finally, we show how to pile up the HBM built for estimating
+the 0+ population size with a rough observation model for the number of smolts
+(of the same cohort) migrating to the sea in order to estimate a survival rate
+between the 0+ juveniles and the smolts stage.
+
+
+## Why sampling freshwater juveniles?
+
+# References

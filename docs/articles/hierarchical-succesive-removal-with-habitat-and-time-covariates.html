@@ -43,7 +43,7 @@
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/hierarchical-exchangeable-cmr.html">Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data</a>
     <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment-analysis.html">Hierarchical Stock Recruitment Analysis</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment</a>
+    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment Analysis</a>
     <a class="dropdown-item" href="../articles/hierarchical-succesive-removal-with-habitat-and-time-covariates.html">Hierarchical Model for Successive Removal Data with Habitat and Time Covariates</a>
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
@@ -68,6 +68,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="" class="logo" alt=""><h1>Hierarchical Model for Successive Removal Data with Habitat and Time Covariates</h1>
+            <h3 data-toc-skip class="subtitle">Jags code for chapter
+10.1</h3>
             
       
       
@@ -77,8 +79,51 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span></code></pre></div>
-  </main>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mcmc-jags.sourceforge.io" class="external-link">rjags</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/posterior/" class="external-link">posterior</a></span><span class="op">)</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="data-and-model-motivation">Data and model motivation<a class="anchor" aria-label="anchor" href="#data-and-model-motivation"></a>
+</h2>
+<p>The model is inspired from <span class="citation">Rivot et al. (<a href="#ref-Rivot2008" role="doc-biblioref">2008</a>)</span>. The example
+shows that Hierarchical Bayesian Modeling (HBM) is flexible and
+effective for the treatment of successive removal catch data. We perform
+the estimation of the population of Atlantic salmon juveniles in the Oir
+River (France) with ten inventory sites sampled by one or two removals
+over the period 1985-2005 given in <span class="citation">Rivot et al.
+(<a href="#ref-Rivot2008" role="doc-biblioref">2008</a>)</span>. We show
+how to develop a general model to assess the effects of temporal
+variations and habitat type, on two latent quantities of interest: the
+density of fish and the probability of capture. Ecological expertise and
+Bayesian model comparison techniques are used to keep the model
+credible, parsimonious and realistic. Predictions of the total number of
+0+ juveniles in the entire river reach can be derived, while accounting
+for all sources of uncertainty involved in this extrapolation. Finally,
+we show how to pile up the HBM built for estimating the 0+ population
+size with a rough observation model for the number of smolts (of the
+same cohort) migrating to the sea in order to estimate a survival rate
+between the 0+ juveniles and the smolts stage.</p>
+<div class="section level3">
+<h3 id="why-sampling-freshwater-juveniles">Why sampling freshwater juveniles?<a class="anchor" aria-label="anchor" href="#why-sampling-freshwater-juveniles"></a>
+</h3>
+</div>
+</div>
+<div class="section level2">
+<h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-Rivot2008" class="csl-entry">
+Rivot, E., E. Prévost, A. Cuzol, J. L. Baglinière, and E. Parent. 2008.
+<span>“Hierarchial <span>B</span>ayesian Modelling with Habitat and Time
+Covariates for Estimating Riverine Fish Population Size by Successive
+Removal Method.”</span> <em>Canadian Journal of Fisheries and Aquatic
+Sciences</em> 65: 117–33.
+</div>
+</div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

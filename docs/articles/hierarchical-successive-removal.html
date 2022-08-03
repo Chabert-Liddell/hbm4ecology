@@ -42,8 +42,7 @@
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/hierarchical-exchangeable-cmr.html">Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment-analysis.html">Hierarchical Stock Recruitment Analysis</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment</a>
+    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment Analysis</a>
     <a class="dropdown-item" href="../articles/hierarchical-succesive-removal-with-habitat-and-time-covariates.html">Hierarchical Model for Successive Removal Data with Habitat and Time Covariates</a>
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
@@ -68,6 +67,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="" class="logo" alt=""><h1>Hierarchical Successive Removal</h1>
+            <h3 data-toc-skip class="subtitle">Jags code for chapter
+10.2</h3>
             
       
       
@@ -79,6 +80,7 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mcmc-jags.sourceforge.io" class="external-link">rjags</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/posterior/" class="external-link">posterior</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/bayesplot/" class="external-link">bayesplot</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggobi.github.io/ggally/" class="external-link">GGally</a></span><span class="op">)</span></span>
@@ -90,14 +92,318 @@ require to marginalize over the successive Binomial distribution. This
 requires some burdensome calculus. Hence we will use <code>jags</code>
 with a standard MCMC.</p>
 <div class="section level2">
-<h2 id="fitting-the-simple-independent-model-with-successive-removal-technique">Fitting the simple independent model with successive removal
-technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-independent-model-with-successive-removal-technique"></a>
+<h2 id="data-and-motivation">Data and motivation<a class="anchor" aria-label="anchor" href="#data-and-motivation"></a>
 </h2>
+<p>We turn to the successive removal Salmon data from the Nivelle, a
+40-km river flowing from the Spanish Pyren'{e}es to the bay of Saint
+Jean de Luz. Details about the fishing procedure can be found in Chapter
+4.2 of <span class="citation">Parent and Prévost (<a href="#ref-hbm4eco" role="doc-biblioref">2013</a>)</span> (page 83). We work with a complete
+dataset involving 3 years (2003-2005) with 11 sites located from the
+Nivelle River mouth to impassable upstream dams on the main stream and
+one of its tributaries. For each of the 33 experiments the number of
+fish caught were recorded for the first (<span class="math inline">\(C^{1}\)</span>), second (<span class="math inline">\(C^{2})\)</span> and eventually third pass <span class="math inline">\((C^{3})\)</span> of the electrofishing experiment.
+In addition, we provide the area <span class="math inline">\(S\)</span>
+in <span class="math inline">\(m^{2}\)</span> that was fished each
+time.</p>
+<center>
+<div class="figure">
+<img src="figures/HBM_SuccRemov_Nivelle/Electrofishing_IA_Scorff.JPG" style="width:70.0%;height:70.0%" alt=""><p class="caption">Electrofishing of 0+ A. salmon juveniles</p>
+</div>
+</center>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#dataList &lt;- source(file = "Chap_10_2_Hierarchical_SuccRem2_Nivelle/data_Hierarchical_SuccRem2_Nivelle.txt")</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"SucRemNivelle"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"SucRemNivelle"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>Site <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">33</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">SucRemNivelle</span><span class="op">[</span><span class="fl">2</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Three passes during successive removal electrofishing </span></span>
+<span><span class="st">               on the Nivelle River (11 sites, years 2003-2004; NA = Not Available"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Three passes during successive removal electrofishing on the
+Nivelle River (11 sites, years 2003-2004; NA = Not Available</caption>
+<thead><tr class="header">
+<th align="right">Site</th>
+<th align="right">C1</th>
+<th align="right">C2</th>
+<th align="right">C3</th>
+<th align="right">S</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">23</td>
+<td align="right">14</td>
+<td align="right">3</td>
+<td align="right">608</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">35</td>
+<td align="right">7</td>
+<td align="right">NA</td>
+<td align="right">294</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">38</td>
+<td align="right">17</td>
+<td align="right">NA</td>
+<td align="right">565</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="right">41</td>
+<td align="right">28</td>
+<td align="right">15</td>
+<td align="right">564</td>
+</tr>
+<tr class="odd">
+<td align="right">5</td>
+<td align="right">17</td>
+<td align="right">8</td>
+<td align="right">NA</td>
+<td align="right">229</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">24</td>
+<td align="right">11</td>
+<td align="right">NA</td>
+<td align="right">200</td>
+</tr>
+<tr class="odd">
+<td align="right">7</td>
+<td align="right">63</td>
+<td align="right">21</td>
+<td align="right">NA</td>
+<td align="right">693</td>
+</tr>
+<tr class="even">
+<td align="right">8</td>
+<td align="right">101</td>
+<td align="right">25</td>
+<td align="right">NA</td>
+<td align="right">571</td>
+</tr>
+<tr class="odd">
+<td align="right">9</td>
+<td align="right">78</td>
+<td align="right">17</td>
+<td align="right">NA</td>
+<td align="right">950</td>
+</tr>
+<tr class="even">
+<td align="right">10</td>
+<td align="right">21</td>
+<td align="right">9</td>
+<td align="right">NA</td>
+<td align="right">430</td>
+</tr>
+<tr class="odd">
+<td align="right">11</td>
+<td align="right">51</td>
+<td align="right">16</td>
+<td align="right">NA</td>
+<td align="right">636</td>
+</tr>
+<tr class="even">
+<td align="right">12</td>
+<td align="right">14</td>
+<td align="right">5</td>
+<td align="right">2</td>
+<td align="right">375</td>
+</tr>
+<tr class="odd">
+<td align="right">13</td>
+<td align="right">19</td>
+<td align="right">1</td>
+<td align="right">NA</td>
+<td align="right">441</td>
+</tr>
+<tr class="even">
+<td align="right">14</td>
+<td align="right">14</td>
+<td align="right">7</td>
+<td align="right">2</td>
+<td align="right">590</td>
+</tr>
+<tr class="odd">
+<td align="right">15</td>
+<td align="right">37</td>
+<td align="right">4</td>
+<td align="right">NA</td>
+<td align="right">665</td>
+</tr>
+<tr class="even">
+<td align="right">16</td>
+<td align="right">22</td>
+<td align="right">15</td>
+<td align="right">2</td>
+<td align="right">228</td>
+</tr>
+<tr class="odd">
+<td align="right">17</td>
+<td align="right">27</td>
+<td align="right">5</td>
+<td align="right">NA</td>
+<td align="right">236</td>
+</tr>
+<tr class="even">
+<td align="right">18</td>
+<td align="right">53</td>
+<td align="right">8</td>
+<td align="right">4</td>
+<td align="right">599</td>
+</tr>
+<tr class="odd">
+<td align="right">19</td>
+<td align="right">32</td>
+<td align="right">4</td>
+<td align="right">NA</td>
+<td align="right">547</td>
+</tr>
+<tr class="even">
+<td align="right">20</td>
+<td align="right">35</td>
+<td align="right">2</td>
+<td align="right">NA</td>
+<td align="right">870</td>
+</tr>
+<tr class="odd">
+<td align="right">21</td>
+<td align="right">37</td>
+<td align="right">7</td>
+<td align="right">NA</td>
+<td align="right">302</td>
+</tr>
+<tr class="even">
+<td align="right">22</td>
+<td align="right">26</td>
+<td align="right">8</td>
+<td align="right">NA</td>
+<td align="right">611</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="right">24</td>
+<td align="right">16</td>
+<td align="right">4</td>
+<td align="right">413</td>
+</tr>
+<tr class="even">
+<td align="right">24</td>
+<td align="right">36</td>
+<td align="right">12</td>
+<td align="right">NA</td>
+<td align="right">473</td>
+</tr>
+<tr class="odd">
+<td align="right">25</td>
+<td align="right">27</td>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">591</td>
+</tr>
+<tr class="even">
+<td align="right">26</td>
+<td align="right">142</td>
+<td align="right">81</td>
+<td align="right">NA</td>
+<td align="right">1095</td>
+</tr>
+<tr class="odd">
+<td align="right">27</td>
+<td align="right">55</td>
+<td align="right">5</td>
+<td align="right">NA</td>
+<td align="right">254</td>
+</tr>
+<tr class="even">
+<td align="right">28</td>
+<td align="right">22</td>
+<td align="right">2</td>
+<td align="right">NA</td>
+<td align="right">288</td>
+</tr>
+<tr class="odd">
+<td align="right">29</td>
+<td align="right">73</td>
+<td align="right">10</td>
+<td align="right">NA</td>
+<td align="right">667</td>
+</tr>
+<tr class="even">
+<td align="right">30</td>
+<td align="right">104</td>
+<td align="right">28</td>
+<td align="right">NA</td>
+<td align="right">606</td>
+</tr>
+<tr class="odd">
+<td align="right">31</td>
+<td align="right">190</td>
+<td align="right">43</td>
+<td align="right">NA</td>
+<td align="right">712</td>
+</tr>
+<tr class="even">
+<td align="right">32</td>
+<td align="right">16</td>
+<td align="right">2</td>
+<td align="right">NA</td>
+<td align="right">341</td>
+</tr>
+<tr class="odd">
+<td align="right">33</td>
+<td align="right">17</td>
+<td align="right">4</td>
+<td align="right">NA</td>
+<td align="right">632</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level2">
+<h2 id="model-with-independence-between-sites">Model with independence between sites<a class="anchor" aria-label="anchor" href="#model-with-independence-between-sites"></a>
+</h2>
+<p>The sampling distribution of the catch data are for each site <span class="math inline">\(i\)</span>:</p>
+<ul>
+<li><span class="math inline">\(C^1_i \sim Binomial(\nu_i,
+\pi_i)\)</span></li>
+<li><span class="math inline">\(C^2_i \sim Binomial(\nu_i - C^1_i,
+\pi_i)\)</span></li>
+<li><span class="math inline">\(C^3_i \sim Binomial(\nu_i -
+(C^1_i+C^2_i), \pi_i)\)</span></li>
+</ul>
+<p>Where we assume a Beta distribution for <span class="math inline">\(\pi_i\)</span>:</p>
+<ul>
+<li>
+<span class="math inline">\(\pi_i \sim beta(a,b)\)</span>, where we
+fix <span class="math inline">\(a=b=1\)</span> for uniform prior.</li>
+</ul>
+<p>We consider that the population size <span class="math inline">\(\nu_i\)</span> depends on the expected fish
+density <span class="math inline">\(\delta_i\)</span> as the area <span class="math inline">\(S_i\)</span> of each sampling site is recorded.
+And we assume the fish to be randomly distributed in space within an
+infinitely large surface from which the site with finite surface <span class="math inline">\(S\)</span> is randomly picked. We further assign a
+prior distribution to the fish density <span class="math inline">\(\delta_i\)</span>, via a Gamma distribution.
+<!-- with a mean close to $1$ fish per $10$m$^2$ as currently proposed  -->
+<!-- by biologists and a very large variance to allow for large uncertainty: --></p>
+<ul>
+<li><span class="math inline">\(\nu_i \sim
+Poisson(\delta_iS_i)\)</span></li>
+<li>
+<span class="math inline">\(\delta_i \sim Gamma(c,d)\)</span>, with
+<span class="math inline">\(c=d=1\)</span>.</li>
+</ul>
+<center>
+<div class="figure">
+<img src="figures/HBM_SuccRemov_Nivelle/DAG_SuccRemov.png" style="width:70.0%;height:70.0%" alt=""><p class="caption">Directed Acyclic Graph for a site with the
+independent model</p>
+</div>
+</center>
+<div class="section level3">
+<h3 id="jags-implementation-and-diagnostic-for-the-independtent-model">Jags implementation and diagnostic for the independtent model<a class="anchor" aria-label="anchor" href="#jags-implementation-and-diagnostic-for-the-independtent-model"></a>
+</h3>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_string</span> <span class="op">&lt;-</span> <span class="st">"model</span></span>
+<code class="sourceCode R"><span><span class="va">ind_model_str</span> <span class="op">&lt;-</span> <span class="st">"model</span></span>
 <span><span class="st">{</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">for (i in 1:I)</span></span>
@@ -110,11 +416,11 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st">    pi[i] ~ dbeta(1, 1)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Prior on fish density</span></span>
-<span><span class="st">    d[i] ~ dgamma(1, 1)</span></span>
+<span><span class="st">    delta[i] ~ dgamma(1, 1)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Number of fish on each site i (surface S[i] in the data set)</span></span>
-<span><span class="st">    Enu[i] &lt;- S[i] * d[i]</span></span>
-<span><span class="st">    nu[i] ~ dpois(Enu[i]) T(,500)</span></span>
+<span><span class="st">    mu_nu[i] &lt;- S[i] * delta[i]</span></span>
+<span><span class="st">    nu[i] ~ dpois(mu_nu[i]) T(,500)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Likelihood</span></span>
 <span><span class="st"># ----------</span></span>
@@ -128,15 +434,40 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st">}</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">}"</span></span></code></pre></div>
+<!-- ```{r ind-init} -->
+<!-- ind_init <- list( -->
+<!--   C3 = c( -->
+<!--     NA, 1.0, 12.0, NA, 5.0, 3.0,9.0,17.0,1.0,3.0, -->
+<!--     5.0, NA,1.0, NA,1.0, NA,0.0, NA,3.0,0.0, -->
+<!--     1.0,5.0, NA,3.0, NA, 38.0,0.0,0.0,2.0,7.0, -->
+<!--     17.0,0.0,0.0), -->
+<!--   nu = c( -->
+<!--     41.0,43.0,79.0,93.0,32.0, 41.0,97.0,149.0,96.0,35.0, -->
+<!--     75.0,22.0,21.0,28.0,42.0, 42.0,33.0,65.0,40.0,38.0, -->
+<!--     45.0,49.0,51.0,52.0,80.0, 296.0,61.0,25.0,86.0,143.0, -->
+<!--     251.0,19.0,22.0), -->
+<!--   delta = c( -->
+<!--     0.06067,0.1387,0.1407,0.1789,0.09835, 0.2021,0.1396,0.2788,0.09932,0.1189, -->
+<!--     0.1096,0.06569,0.02846,0.04362,0.05197, 0.166,0.175,0.09556,0.07486,0.0426, -->
+<!--     0.1533,0.09649,0.0999,0.09703,0.1222, 0.2742,0.2165,0.1009,0.1384,0.2467, -->
+<!--     0.3063,0.07111,0.03743), -->
+<!--   pi = c( -->
+<!--     0.6365,0.7319,0.4527,0.4956,0.5789, 0.6347,0.6508,0.6266,0.8438,0.501, -->
+<!--     0.7697,0.6129,0.7505,0.3233,0.8757, 0.6493,0.8114,0.7924,0.6415,0.9126, -->
+<!--     0.8147,0.5535,0.6124,0.7591,0.4126, 0.5203,0.9133,0.8758,0.8542,0.7182, -->
+<!--     0.7681,0.8559,0.799)) -->
+<!-- ``` -->
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">model_string</span><span class="op">)</span>, </span>
-<span>                    data <span class="op">=</span> <span class="va">SucRemNivelle</span>,</span>
-<span>                    n.chains <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in jags.model(file = textConnection(model_string), data =</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">ind_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">ind_model_str</span><span class="op">)</span>, </span>
+<span>                    data <span class="op">=</span> <span class="va">SucRemNivelle</span>, </span>
+<span>                 <span class="co">#   inits = replicate(3, ind_init, simplify = FALSE),</span></span>
+<span>                    n.chains <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in jags.model(file = textConnection(ind_model_str), data =</span></span>
 <span><span class="co">#&gt; SucRemNivelle, : Unused variable "AI" in data</span></span>
-<span><span class="co">#&gt; Warning in jags.model(file = textConnection(model_string), data =</span></span>
+<span><span class="co">#&gt; Warning in jags.model(file = textConnection(ind_model_str), data =</span></span>
 <span><span class="co">#&gt; SucRemNivelle, : Unused variable "I_pred" in data</span></span>
-<span><span class="co">#&gt; Warning in jags.model(file = textConnection(model_string), data =</span></span>
+<span><span class="co">#&gt; Warning in jags.model(file = textConnection(ind_model_str), data =</span></span>
 <span><span class="co">#&gt; SucRemNivelle, : Unused variable "AI_pred" in data</span></span>
 <span><span class="co">#&gt; Compiling model graph</span></span>
 <span><span class="co">#&gt;    Resolving undeclared variables</span></span>
@@ -149,63 +480,99 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="co">#&gt; Initializing model</span></span>
 <span></span>
 <span><span class="co"># Inferences</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">model</span>, n.iter <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
-<span><span class="va">posterior_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span><span class="va">model</span>,</span>
-<span>                       variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pi"</span>, <span class="st">"d"</span>, <span class="st">"nu"</span><span class="op">)</span>,</span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">ind_model</span>, n.iter <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
+<span><span class="va">ind_posterior_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span><span class="va">ind_model</span>,</span>
+<span>                       variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pi"</span>, <span class="st">"delta"</span>, <span class="st">"nu"</span><span class="op">)</span>,</span>
 <span>                       n.iter <span class="op">=</span> <span class="fl">10000</span>,</span>
 <span>                       thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-traces.html" class="external-link">mcmc_trace</a></span><span class="op">(</span><span class="va">posterior_sample</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"d[5]"</span>, <span class="st">"pi[5]"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="hierarchical-successive-removal_files/figure-html/trace-ind-1.png" width="700"></p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df_ind</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">posterior_sample</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va">df_ind</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">`pi.5`</span>, <span class="va">`d.5`</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">`d.5`</span>, <span class="va">`pi.5`</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density_2d.html" class="external-link">geom_density_2d</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span>, base_line_size <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position<span class="op">=</span><span class="st">"none"</span><span class="op">)</span><span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">delta</span><span class="op">)</span>,</span>
-<span>       y<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">pi</span><span class="op">)</span>,title<span class="op">=</span><span class="st">"Fish density vs Capture efficiency at site 5"</span><span class="op">)</span> </span>
-<span><span class="fu">ggExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ggExtra/man/ggMarginal.html" class="external-link">ggMarginal</a></span><span class="op">(</span><span class="va">p</span>, type <span class="op">=</span> <span class="st">"densigram"</span>, bins <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Ignoring unknown parameters: bins</span></span>
-<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
-<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
-<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">diagnostic</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">ind_posterior_sample</span><span class="op">)</span>,</span>
+<span>                <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">default_convergence_measures</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> </span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">diagnostic</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">rhat</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
+<span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
 <p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-2-1.png" width="700"></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">diagnostic</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">ess_bulk</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
+<span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-2-2.png" width="700"></p>
+<p>We notice some convergence issues on sites with insufficient
+information (<em>e.g.</em> sites number 5, 10 or 26).</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-traces.html" class="external-link">mcmc_trace</a></span><span class="op">(</span><span class="va">ind_posterior_sample</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"delta[5]"</span>, <span class="st">"pi[5]"</span>, <span class="st">"delta[10]"</span>, <span class="st">"pi[10]"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/trace-ind-1.png" width="700"></p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw_ind</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">ind_posterior_sample</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="hierarchical-modeling">Hierarchical modeling<a class="anchor" aria-label="anchor" href="#hierarchical-modeling"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_string_hier</span> <span class="op">&lt;-</span> <span class="st">"model</span></span>
+<p>We add a hierarchical additional layer that this the experiments
+together. We do so by adding prior distribution to <span class="math inline">\(a\)</span>, <span class="math inline">\(b\)</span>, <span class="math inline">\(c\)</span>
+and <span class="math inline">\(d\)</span>. For the parameters <span class="math inline">\((a, b)\)</span> we use a simple transformation by
+considering:</p>
+<ul>
+<li>
+<span class="math inline">\(\mu_{a,b} = \frac{a}{a+b}\)</span> with
+<span class="math inline">\(\mu_{a,b} \sim Beta(1.5,1.5)\)</span>, which
+is the mean of the Beta distribution.</li>
+<li>
+<span class="math inline">\(u_{a,b} = a+b\)</span> with <span class="math inline">\(\log(u_{a,b}) \sim Uniform(0,10)\)</span> can be
+interpreted as a prior sample size that scales the variance of the Beta
+prior distribution.</li>
+</ul>
+<p>We follow the same line of reasoning, a change of variable for
+parameters <span class="math inline">\(c\)</span> and <span class="math inline">\(d\)</span> with mean <span class="math inline">\(\mu_{\delta} = \frac{c}{d}\)</span> and standard
+deviation <span class="math inline">\(\sigma_{\delta} =
+\frac{\sqrt{c}}{d}\)</span>. Prior knowledge about juvenile salmon
+density suggests and informative prior for <span class="math inline">\(\mu_{\delta}\)</span> and a diffuse prior for
+<span class="math inline">\(\sigma_{\delta}\)</span>:</p>
+<ul>
+<li><span class="math inline">\(\mu_{\delta} \sim
+Gamma(1,1)\)</span></li>
+<li>
+<span class="math inline">\(\sigma_{\delta} \sim Gamma(1,
+10^{-3})\)</span>.</li>
+</ul>
+<center>
+<div class="figure">
+<img src="figures/HBM_SuccRemov_Nivelle/DAG_Nivelle.png" style="width:70.0%;height:70.0%" alt=""><p class="caption">Directed Acyclic Graph of the hierarchical model for
+successive removals.</p>
+</div>
+</center>
+<div class="section level3">
+<h3 id="jags-implementation-and-diagnostic-for-the-hierarchical-model">Jags implementation and diagnostic for the hierarchical model<a class="anchor" aria-label="anchor" href="#jags-implementation-and-diagnostic-for-the-hierarchical-model"></a>
+</h3>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hier_model_str</span> <span class="op">&lt;-</span> <span class="st">"model</span></span>
 <span><span class="st">{</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Priors</span></span>
 <span><span class="st"># ------</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Hyperprior for the trapping efficiency</span></span>
-<span><span class="st">mu.p ~ dbeta(1,1) </span></span>
-<span><span class="st">log.u.p ~ dunif(0,10)</span></span>
-<span><span class="st">u.p &lt;- exp(log.u.p)</span></span>
+<span><span class="st">mu_p ~ dbeta(1.5 ,1.5) </span></span>
+<span><span class="st">log_u_p ~ dunif(0,10)</span></span>
+<span><span class="st">u_p &lt;- exp(log_u_p)</span></span>
 <span><span class="st"></span></span>
-<span><span class="st">a &lt;- mu.p * u.p</span></span>
-<span><span class="st">b &lt;- (1-mu.p) * u.p</span></span>
+<span><span class="st">a &lt;- mu_p * u_p</span></span>
+<span><span class="st">b &lt;- (1-mu_p) * u_p</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Compute standard deviation of p</span></span>
-<span><span class="st">var.p &lt;- mu.p*(1-mu.p)*(1/(u.p+1))</span></span>
-<span><span class="st">sd.p &lt;- sqrt(var.p)</span></span>
+<span><span class="st">var_p &lt;- mu_p*(1-mu_p)*(1/(u_p+1))</span></span>
+<span><span class="st">sd_p &lt;- sqrt(var_p)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Hyperpriror for the density</span></span>
-<span><span class="st">mu.d ~ dgamma(1,1)</span></span>
-<span><span class="st">sd.d ~ dgamma(1,0.001)</span></span>
+<span><span class="st">mu_d ~ dgamma(1,1)</span></span>
+<span><span class="st">sd_d ~ dgamma(1,0.001)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Parameterization of the Gamma distribution</span></span>
-<span><span class="st">c1 &lt;- pow(mu.d,2) / pow(sd.d,2)</span></span>
-<span><span class="st">d1 &lt;- mu.d / pow(sd.d,2)</span></span>
+<span><span class="st">c &lt;- pow(mu_d,2) / pow(sd_d,2)</span></span>
+<span><span class="st">d &lt;- mu_d / pow(sd_d,2)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">for (i in 1:I)</span></span>
 <span><span class="st">{</span></span>
@@ -214,11 +581,11 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st">    pi[i] ~ dbeta(a,b)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Prior on fish density</span></span>
-<span><span class="st">    d[i] ~ dgamma(c1,d1)</span></span>
+<span><span class="st">    delta[i] ~ dgamma(c,d)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Number of fish (S[i] in the data set)</span></span>
-<span><span class="st">    Enu[i] &lt;- S[i] * d[i]</span></span>
-<span><span class="st">    nu[i] ~ dpois(Enu[i]) T(,500)</span></span>
+<span><span class="st">    mu_nu[i] &lt;- S[i] * delta[i]</span></span>
+<span><span class="st">    nu[i] ~ dpois(mu_nu[i]) T(,500)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">}</span></span>
 <span><span class="st"></span></span>
@@ -236,16 +603,17 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st"></span></span>
 <span><span class="st">}</span></span>
 <span><span class="st">"</span></span></code></pre></div>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span></span>
-<span>  file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">model_string_hier</span><span class="op">)</span>, </span>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">hier_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span></span>
+<span>  file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">hier_model_str</span><span class="op">)</span>, </span>
 <span>  data <span class="op">=</span> <span class="va">SucRemNivelle</span>,</span>
-<span>  n.chains <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in jags.model(file = textConnection(model_string_hier), data =</span></span>
+<span>  n.chains <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in jags.model(file = textConnection(hier_model_str), data =</span></span>
 <span><span class="co">#&gt; SucRemNivelle, : Unused variable "AI" in data</span></span>
-<span><span class="co">#&gt; Warning in jags.model(file = textConnection(model_string_hier), data =</span></span>
+<span><span class="co">#&gt; Warning in jags.model(file = textConnection(hier_model_str), data =</span></span>
 <span><span class="co">#&gt; SucRemNivelle, : Unused variable "I_pred" in data</span></span>
-<span><span class="co">#&gt; Warning in jags.model(file = textConnection(model_string_hier), data =</span></span>
+<span><span class="co">#&gt; Warning in jags.model(file = textConnection(hier_model_str), data =</span></span>
 <span><span class="co">#&gt; SucRemNivelle, : Unused variable "AI_pred" in data</span></span>
 <span><span class="co">#&gt; Compiling model graph</span></span>
 <span><span class="co">#&gt;    Resolving undeclared variables</span></span>
@@ -253,35 +621,157 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="co">#&gt; Graph information:</span></span>
 <span><span class="co">#&gt;    Observed stochastic nodes: 74</span></span>
 <span><span class="co">#&gt;    Unobserved stochastic nodes: 128</span></span>
-<span><span class="co">#&gt;    Total graph size: 353</span></span>
+<span><span class="co">#&gt;    Total graph size: 354</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Initializing model</span></span>
 <span></span>
 <span><span class="co"># Inferences</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">model_hier</span>, n.iter <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span>
-<span><span class="va">posterior_sample_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span></span>
-<span>  <span class="va">model_hier</span>,</span>
-<span>  variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c1"</span>, <span class="st">"d1"</span>, <span class="st">"mu.d"</span>, <span class="st">"mu.p"</span>, </span>
-<span>                     <span class="st">"pi"</span>, <span class="st">"d"</span>, <span class="st">"nu"</span><span class="op">)</span>,</span>
-<span>  n.iter <span class="op">=</span> <span class="fl">20000</span>,</span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">hier_model</span>, n.iter <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
+<span><span class="va">hier_posterior_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span></span>
+<span>  <span class="va">hier_model</span>,</span>
+<span>  variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>, <span class="st">"d"</span>, <span class="st">"mu_d"</span>, <span class="st">"mu_p"</span>, </span>
+<span>                     <span class="st">"pi"</span>, <span class="st">"delta"</span>, <span class="st">"nu"</span><span class="op">)</span>,</span>
+<span>  n.iter <span class="op">=</span> <span class="fl">10000</span>,</span>
 <span>  thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-traces.html" class="external-link">mcmc_trace</a></span><span class="op">(</span><span class="va">posterior_sample_hier</span>, </span>
-<span>           pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c1"</span>, <span class="st">"d1"</span>, <span class="st">"mu.d"</span>, <span class="st">"mu.p"</span>,<span class="st">"d[5]"</span>, <span class="st">"pi[5]"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="hierarchical-successive-removal_files/figure-html/trace-hier-1.png" width="700"></p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">posterior_sample_hier</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">hier_posterior_sample</span><span class="op">)</span>,</span>
+<span>                <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">default_convergence_measures</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">variable</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>, <span class="st">"d"</span>, <span class="st">"mu_d"</span>, <span class="st">"mu_p"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  </span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left">variable</th>
+<th align="right">rhat</th>
+<th align="right">ess_bulk</th>
+<th align="right">ess_tail</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">a</td>
+<td align="right">1.000409</td>
+<td align="right">1970.642</td>
+<td align="right">2753.226</td>
+</tr>
+<tr class="even">
+<td align="left">b</td>
+<td align="right">1.000852</td>
+<td align="right">2102.485</td>
+<td align="right">2684.452</td>
+</tr>
+<tr class="odd">
+<td align="left">c</td>
+<td align="right">1.000019</td>
+<td align="right">2734.448</td>
+<td align="right">2759.075</td>
+</tr>
+<tr class="even">
+<td align="left">d</td>
+<td align="right">1.000464</td>
+<td align="right">2701.168</td>
+<td align="right">2689.600</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_d</td>
+<td align="right">1.000317</td>
+<td align="right">2926.402</td>
+<td align="right">2845.416</td>
+</tr>
+<tr class="even">
+<td align="left">mu_p</td>
+<td align="right">1.000003</td>
+<td align="right">2067.747</td>
+<td align="right">2480.764</td>
+</tr>
+</tbody>
+</table>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">phier</span> <span class="op">&lt;-</span> <span class="va">df_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">`pi.5`</span>, <span class="va">`d.5`</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">`d.5`</span>, <span class="va">`pi.5`</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-traces.html" class="external-link">mcmc_trace</a></span><span class="op">(</span><span class="va">hier_posterior_sample</span>, </span>
+<span>           pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"delta[5]"</span>, <span class="st">"pi[5]"</span>,</span>
+<span>                    <span class="st">"delta[10]"</span>, <span class="st">"pi[10]"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/trace-hier-1.png" width="700"></p>
+</div>
+<div class="section level3">
+<h3 id="analysis">Analysis<a class="anchor" aria-label="anchor" href="#analysis"></a>
+</h3>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">hier_posterior_sample</span><span class="op">)</span></span></code></pre></div>
+<p>We draw the posterior distribution for the model parameters:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>, <span class="st">"d"</span>, <span class="st">"mu_d"</span>, <span class="st">"mu_p"</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu">GGally</span><span class="fu">::</span><span class="fu"><a href="https://ggobi.github.io/ggally/reference/ggpairs.html" class="external-link">ggpairs</a></span><span class="op">(</span></span>
+<span>  columnLabels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>, <span class="st">"d"</span>, <span class="st">"mu[delta]"</span>, <span class="st">"mu[pi]"</span><span class="op">)</span>,</span>
+<span>  labeller <span class="op">=</span> <span class="st">"label_parsed"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_linedraw</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span>, base_line_size <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>axis.ticks <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_line</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">/</span><span class="fl">22</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-5-1.png" width="700"></p>
+<p>The expected efficiency of capture <span class="math inline">\(\mu_{\pi}\)</span> lies around <span class="math inline">\(0.7\)</span> and the <span class="math inline">\(\pi\)</span>’s are dispersed among sites
+approximately like a <span class="math inline">\(Beta(7,3)\)</span>. We
+get a good posterior knowledge about the expected density: <span class="math inline">\(\mu_{\delta}\)</span> is about <span class="math inline">\(13\)</span> individuals per 100<span class="math inline">\(m^{2}\)</span>. In addition, one obtains a rather
+small standard deviation <span class="math inline">\(\sigma_{\delta}\)</span> of fish densities among
+sites but, locally, the densities <span class="math inline">\(\delta_{i}\)</span> ’s are generally not precisely
+estimated.</p>
+<p>The hierarchical model borrows strength from neighbors. Consequently
+the problem of banana-shaped joint distribution between <span class="math inline">\(\pi\)</span> and <span class="math inline">\(\delta\)</span> is reduced when recourse is made
+to hierarchical modeling. As an example, when considered solely, site 5
+and 10 exhibit poor determination of <span class="math inline">\(\pi\)</span> and <span class="math inline">\(\delta\)</span> as shown in the figures below. The
+data at site 5 or 10 alone are insufficient to opt for a large capture
+efficiency <span class="math inline">\(\pi\)</span> associated a small
+population size or for a small capture efficiency with a high local
+population density <span class="math inline">\(\delta\)</span>. Under
+the hierarchical model though, sufficient transfer of information
+between sites helps specify the probable joint domain where <span class="math inline">\(\pi\)</span> and <span class="math inline">\(\delta\)</span> are to be expected.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va">dfw_ind</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">`pi.5`</span>, <span class="va">`delta.5`</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">`delta.5`</span>, <span class="va">`pi.5`</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density_2d.html" class="external-link">geom_density_2d</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span>, base_line_size <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position<span class="op">=</span><span class="st">"none"</span><span class="op">)</span><span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">delta</span><span class="op">)</span>,</span>
+<span>       y<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">pi</span><span class="op">)</span>,</span>
+<span>       title<span class="op">=</span><span class="st">"Fish density vs Capture efficiency at site 5"</span>,</span>
+<span>       subtitle <span class="op">=</span> <span class="st">"Independent model"</span><span class="op">)</span> </span>
+<span><span class="fu">ggExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ggExtra/man/ggMarginal.html" class="external-link">ggMarginal</a></span><span class="op">(</span><span class="va">p</span>, type <span class="op">=</span> <span class="st">"densigram"</span>, bins <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-6-1.png" width="700"></p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va">dfw_ind</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">`pi.10`</span>, <span class="va">`delta.10`</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">`delta.10`</span>, <span class="va">`pi.10`</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density_2d.html" class="external-link">geom_density_2d</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span>, base_line_size <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position<span class="op">=</span><span class="st">"none"</span><span class="op">)</span><span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">delta</span><span class="op">)</span>,</span>
+<span>       y<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">pi</span><span class="op">)</span>,</span>
+<span>       title<span class="op">=</span><span class="st">"Fish density vs Capture efficiency at site 10"</span>,</span>
+<span>       subtitle <span class="op">=</span> <span class="st">"Independent model"</span><span class="op">)</span> </span>
+<span><span class="fu">ggExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ggExtra/man/ggMarginal.html" class="external-link">ggMarginal</a></span><span class="op">(</span><span class="va">p</span>, type <span class="op">=</span> <span class="st">"densigram"</span>, bins <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-7-1.png" width="700"></p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">phier</span> <span class="op">&lt;-</span> <span class="va">dfw_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">`pi.5`</span>, <span class="va">`delta.5`</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">`delta.5`</span>, <span class="va">`pi.5`</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density_2d.html" class="external-link">geom_density_2d</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">xlim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.3</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span>, base_line_size <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position<span class="op">=</span><span class="st">"none"</span><span class="op">)</span><span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">delta</span><span class="op">)</span>,</span>
-<span>       y<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">pi</span><span class="op">)</span>,title<span class="op">=</span><span class="st">"Fish density vs Capture efficiency at site 5 for the hierarchical model"</span><span class="op">)</span> </span>
+<span>       y<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">pi</span><span class="op">)</span>,title<span class="op">=</span><span class="st">"Fish density vs Capture efficiency at site 5"</span>,</span>
+<span>       subtitle <span class="op">=</span> <span class="st">"Hierarchical model"</span><span class="op">)</span> </span>
 <span><span class="fu">ggExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ggExtra/man/ggMarginal.html" class="external-link">ggMarginal</a></span><span class="op">(</span><span class="va">phier</span>, type <span class="op">=</span> <span class="st">"densigram"</span>, bins <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: Removed 1 rows containing non-finite values (stat_density2d).</span></span>
 <span><span class="co">#&gt; Removed 1 rows containing non-finite values (stat_density2d).</span></span>
@@ -292,45 +782,285 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
 <span><span class="co">#&gt; Warning: Removed 1 rows containing non-finite values (stat_density2d).</span></span>
 <span><span class="co">#&gt; Warning: Removed 1 rows containing missing values (geom_point).</span></span></code></pre></div>
-<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-4-1.png" width="700"></p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c1"</span>, <span class="st">"d1"</span>, <span class="st">"mu_d"</span>, <span class="st">"mu_p"</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu">GGally</span><span class="fu">::</span><span class="fu"><a href="https://ggobi.github.io/ggally/reference/ggpairs.html" class="external-link">ggpairs</a></span><span class="op">(</span></span>
-<span>  columnLabels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>, <span class="st">"d"</span>, <span class="st">"mu[delta]"</span>, <span class="st">"mu[pi]"</span><span class="op">)</span>,</span>
-<span>  labeller <span class="op">=</span> <span class="st">"label_parsed"</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-5-1.png" width="700"></p>
+<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">phier</span> <span class="op">&lt;-</span> <span class="va">dfw_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">`pi.10`</span>, <span class="va">`delta.10`</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">`delta.10`</span>, <span class="va">`pi.10`</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density_2d.html" class="external-link">geom_density_2d</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">xlim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.3</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span>, base_line_size <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position<span class="op">=</span><span class="st">"none"</span><span class="op">)</span><span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">delta</span><span class="op">)</span>,</span>
+<span>       y<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">pi</span><span class="op">)</span>,</span>
+<span>       title<span class="op">=</span><span class="st">"Fish density vs Capture efficiency at site 10"</span>,</span>
+<span>       subtitle <span class="op">=</span> <span class="st">"Hierarchical model"</span><span class="op">)</span> </span>
+<span><span class="fu">ggExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ggExtra/man/ggMarginal.html" class="external-link">ggMarginal</a></span><span class="op">(</span><span class="va">phier</span>, type <span class="op">=</span> <span class="st">"densigram"</span>, bins <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
+</div>
 </div>
 <div class="section level2">
-<h2 id="fast-sampling-technique-with-abundance-index">Fast sampling technique with abundance index<a class="anchor" aria-label="anchor" href="#fast-sampling-technique-with-abundance-index"></a>
+<h2 id="combining-successive-removals-and-a-rapid-sampling-technique">Combining successive removals and a rapid sampling technique<a class="anchor" aria-label="anchor" href="#combining-successive-removals-and-a-rapid-sampling-technique"></a>
 </h2>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_string_AI</span> <span class="op">&lt;-</span> <span class="st">"model</span></span>
+<p>Removal sampling by electric fishing is time and manpower consuming,
+because it is difficult to store the removed fish and to go thrice in
+the field for a large number of sites. To increase the number of sites
+sampled with limited budget and diminishing human resources, recourse
+can be made to rapid electric fishing assessment techniques. A 5-mn
+sampling technique requires a single-timed sample for each site under a
+lighter protocol but only provides relative abundance measures. To be
+used for absolute population abundance estimation, abundance indices
+(<span class="math inline">\(AI\)</span>) need ¨to be first calibrated
+with another method of population size estimation.</p>
+<p>The <span class="math inline">\(AI\)</span>’s performed on the <span class="math inline">\(33\)</span> site of the dataset:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>Site <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="va">SucRemNivelle</span><span class="op">$</span><span class="va">I</span>, AI <span class="op">=</span> <span class="va">SucRemNivelle</span><span class="op">$</span><span class="va">AI</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">Site</th>
+<th align="right">AI</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">6</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">17</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">12</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="right">17</td>
+</tr>
+<tr class="odd">
+<td align="right">5</td>
+<td align="right">11</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">22</td>
+</tr>
+<tr class="odd">
+<td align="right">7</td>
+<td align="right">16</td>
+</tr>
+<tr class="even">
+<td align="right">8</td>
+<td align="right">25</td>
+</tr>
+<tr class="odd">
+<td align="right">9</td>
+<td align="right">25</td>
+</tr>
+<tr class="even">
+<td align="right">10</td>
+<td align="right">15</td>
+</tr>
+<tr class="odd">
+<td align="right">11</td>
+<td align="right">11</td>
+</tr>
+<tr class="even">
+<td align="right">12</td>
+<td align="right">4</td>
+</tr>
+<tr class="odd">
+<td align="right">13</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="right">14</td>
+<td align="right">6</td>
+</tr>
+<tr class="odd">
+<td align="right">15</td>
+<td align="right">9</td>
+</tr>
+<tr class="even">
+<td align="right">16</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="right">17</td>
+<td align="right">13</td>
+</tr>
+<tr class="even">
+<td align="right">18</td>
+<td align="right">16</td>
+</tr>
+<tr class="odd">
+<td align="right">19</td>
+<td align="right">14</td>
+</tr>
+<tr class="even">
+<td align="right">20</td>
+<td align="right">10</td>
+</tr>
+<tr class="odd">
+<td align="right">21</td>
+<td align="right">25</td>
+</tr>
+<tr class="even">
+<td align="right">22</td>
+<td align="right">4</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="right">24</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="right">25</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="right">26</td>
+<td align="right">63</td>
+</tr>
+<tr class="odd">
+<td align="right">27</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="right">28</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="right">29</td>
+<td align="right">21</td>
+</tr>
+<tr class="even">
+<td align="right">30</td>
+<td align="right">41</td>
+</tr>
+<tr class="odd">
+<td align="right">31</td>
+<td align="right">44</td>
+</tr>
+<tr class="even">
+<td align="right">32</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="right">33</td>
+<td align="right">5</td>
+</tr>
+</tbody>
+</table>
+<p>To perform such a calibration in a consistent Bayesian framework, we
+need to model jointly successive removals and <span class="math inline">\(AI\)</span>’s. There is a strong link between the
+observed abundance indices and the mean of the posterior pdf of <span class="math inline">\(\delta\)</span> that we take as an estimate of the
+fish density from each site.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfl_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">hier_posterior_sample</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Model <span class="op">=</span> <span class="st">"Hierarchical"</span><span class="op">)</span></span>
+<span><span class="va">df_delta_AI</span>  <span class="op">&lt;-</span> <span class="va">dfl_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^delta\\."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span><span class="st">"delta"</span> <span class="op">=</span> <span class="va">value</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Site <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">7</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">Site</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>mean_delta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">delta</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>abundance <span class="op">=</span> <span class="va">SucRemNivelle</span><span class="op">$</span><span class="va">AI</span><span class="op">)</span></span>
+<span><span class="va">df_delta_AI</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">abundance</span>, y <span class="op">=</span> <span class="va">mean_delta</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">.4</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">xlim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">70</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Abundance indices"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Estimated fish density"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Posterior means of Salmon juvenile density (under hierarchical bayesian model) versus observed Abundance Indices."</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Removed 5 rows containing missing values (geom_point).</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/plot-10-17-1.png" width="700"></p>
+<p>We can figure out a linear trend but with an increasing dispersion.
+Conversely to the homoscedastic behavior of the linear regression model,
+the variance should depend on the mean. Keeping these clues in mind, we
+relate the vector of Salmon juveniles’ density <span class="math inline">\(\delta_{i}\)</span>’s to the vector of abundance
+indices <span class="math inline">\(AI_{i}\)</span>’s as follows:</p>
+<ul>
+<li>As we are counting events, we hypothesize for each site <span class="math inline">\(i\)</span>, a Poisson distribution for AI around a
+mean value <span class="math inline">\(\mu_{AI}:\)</span>
+</li>
+</ul>
+<p><span class="math display">\[ AI_{i}~\sim~Poisson(\mu_{AI_{i}})
+\]</span></p>
+<ul>
+<li>In turn, this true mean value <span class="math inline">\(\mu_{AI}\)</span> will be drawn from a Gamma
+distribution.</li>
+</ul>
+<p><span class="math display">\[
+\mu_{AI_{i}} ~ \sim~ Gamma(\alpha_{AI_{i}},\beta_{AI_{i}})
+\]</span></p>
+<p>Such a choice can be hypothesized for two reasons:</p>
+<ul>
+<li>The convolution of a Poisson by a Gamma distribution makes a
+negative Binomial pdf, a common model for overdispersion in a counting
+experiment;</li>
+<li>By setting $<em>{AI</em>{i}}=f, <em>{AI{i}}=kf</em>{i}% $, one can
+describe a variance increasing (linearly) with the mean since:</li>
+</ul>
+<p><span class="math display">\[
+\left\{
+\begin{aligned}
+&amp; \mathbb{E}(\mu_{AI_{i}}) = \frac{\alpha_{AI_{i}}}{\beta_{AI_{i}}}%
+= k\delta_{i}\\
+&amp; \mathbb{V}(\mu_{AI_{i}}) =
+\frac{\alpha_{AI_{i}}}{\beta_{AI_{i}}^{2}}%
+= \frac{     \mathbb{E}   (\mu_{AI_{i}})     }{f}
+\end{aligned}
+\right.
+\]</span></p>
+<p>\end{enumerate}</p>
+<p>The additional parameters <span class="math inline">\(k\)</span> and
+<span class="math inline">\(f\)</span> must be assigned a prior pdf.
+Parameter <span class="math inline">\(k\)</span> is given a flat
+noninformative gamma prior: <span class="math display">\[
+k~\sim~Gamma(1,10^{-3}) \]</span> It is convenient to work with <span class="math inline">\(\phi\)</span> such that <span class="math inline">\(F=\frac{\phi}{1-\phi}\)</span>. <span class="math inline">\(\phi\)</span> is the probability parameter from
+the Negative Binomial and we naturally opt for a uniform pdf: <span class="math display">\[ \phi ~ \sim~Beta(1,1) \]</span></p>
+<center>
+<div class="figure">
+<img src="figures/HBM_SuccRemov_Nivelle/DAG_Nivelle_full.png" style="width:70.0%;height:70.0%" alt=""><p class="caption">Directed Acyclic Graph of the hierarchical model for
+successive removals including abundance indices as an additional source
+of information for the 0+ juveniles density.</p>
+</div>
+</center>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ai_model_str</span> <span class="op">&lt;-</span> <span class="st">"model</span></span>
 <span><span class="st">{</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Priors</span></span>
 <span><span class="st"># ------</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Hyperprior for the trapping efficiency</span></span>
-<span><span class="st">mu.p ~ dbeta(1,1) </span></span>
-<span><span class="st">log.u.p ~ dunif(0,10)</span></span>
-<span><span class="st">u.p &lt;- exp(log.u.p)</span></span>
+<span><span class="st">mu_p ~ dbeta(1,1) </span></span>
+<span><span class="st">log_u_p ~ dunif(0,10)</span></span>
+<span><span class="st">u_p &lt;- exp(log_u_p)</span></span>
 <span><span class="st"></span></span>
-<span><span class="st">a &lt;- mu.p * u.p</span></span>
-<span><span class="st">b &lt;- (1-mu.p) * u.p</span></span>
+<span><span class="st">a &lt;- mu_p * u_p</span></span>
+<span><span class="st">b &lt;- (1-mu_p) * u_p</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Compute standard deviation of p</span></span>
-<span><span class="st">var.p &lt;- mu.p*(1-mu.p)*(1/(u.p+1))</span></span>
-<span><span class="st">sd.p &lt;- sqrt(var.p)</span></span>
+<span><span class="st">var_p &lt;- mu_p*(1-mu_p)*(1/(u_p+1))</span></span>
+<span><span class="st">sd_p &lt;- sqrt(var_p)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Hyperpriror for the density</span></span>
-<span><span class="st">mu.d ~ dgamma(1,1)</span></span>
-<span><span class="st">sd.d ~ dgamma(1,0.001)</span></span>
+<span><span class="st">mu_d ~ dgamma(1,1)</span></span>
+<span><span class="st">sd_d ~ dgamma(1,0.001)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Parameterization of the Gamma distribution</span></span>
-<span><span class="st">c1 &lt;- pow(mu.d,2) / pow(sd.d,2)</span></span>
-<span><span class="st">d1 &lt;- mu.d / pow(sd.d,2)</span></span>
+<span><span class="st">c &lt;- pow(mu_d,2) / pow(sd_d,2)</span></span>
+<span><span class="st">d &lt;- mu_d / pow(sd_d,2)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">for (i in 1:I)</span></span>
 <span><span class="st">{</span></span>
@@ -339,11 +1069,11 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st">    pi[i] ~ dbeta(a,b)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Prior on fish density</span></span>
-<span><span class="st">    d[i] ~ dgamma(c1,d1)</span></span>
+<span><span class="st">    delta[i] ~ dgamma(c,d)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st"># Number of fish (S[i] in the data set)</span></span>
-<span><span class="st">    Enu[i] &lt;- S[i] * d[i]</span></span>
-<span><span class="st">    nu[i] ~ dpois(Enu[i]) T(,500)</span></span>
+<span><span class="st">    mu_nu[i] &lt;- S[i] * delta[i]</span></span>
+<span><span class="st">    nu[i] ~ dpois(mu_nu[i]) T(,500)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">}</span></span>
 <span><span class="st"></span></span>
@@ -354,8 +1084,8 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st"></span></span>
 <span><span class="st"># Priors for the Abundance index</span></span>
 <span><span class="st">for (i in 1:I) {</span></span>
-<span><span class="st">  alpha.AI[i] &lt;- k*f*d[i]</span></span>
-<span><span class="st">  mu.AI[i] ~ dgamma(alpha.AI[i], f)</span></span>
+<span><span class="st">  alpha_AI[i] &lt;- k*f*delta[i]</span></span>
+<span><span class="st">  mu_AI[i] ~ dgamma(alpha_AI[i], f)</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">}</span></span>
 <span><span class="st"></span></span>
@@ -369,7 +1099,7 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st">    C2[i] ~ dbin(pi[i], nur1[i])</span></span>
 <span><span class="st">    nur2[i] &lt;- nur1[i] - C2[i]</span></span>
 <span><span class="st">    C3[i] ~ dbin(pi[i], nur2[i])</span></span>
-<span><span class="st">  AI[i] ~ dpois(mu.AI[i])</span></span>
+<span><span class="st">  AI[i] ~ dpois(mu_AI[i])</span></span>
 <span><span class="st">  </span></span>
 <span><span class="st">}</span></span>
 <span><span class="st"></span></span>
@@ -377,38 +1107,20 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="st"># observed abundance indices</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">for (i in 1:I_pred) {</span></span>
-<span><span class="st">  AI_pred[i] ~ dpois(mu.AI_pred[i])</span></span>
-<span><span class="st">  mu.AI_pred[i] ~ dgamma(alpha.AI_pred[i], f)</span></span>
-<span><span class="st">  alpha.AI_pred[i] &lt;- k * d_pred[i] * f</span></span>
-<span><span class="st">  d_pred[i] ~ dgamma(c1,d1)</span></span>
+<span><span class="st">  AI_pred[i] ~ dpois(mu_AI_pred[i])</span></span>
+<span><span class="st">  mu_AI_pred[i] ~ dgamma(alpha_AI_pred[i], f)</span></span>
+<span><span class="st">  alpha_AI_pred[i] &lt;- k * delta_pred[i] * f</span></span>
+<span><span class="st">  delta_pred[i] ~ dgamma(c,d)</span></span>
 <span><span class="st">  # Link with observed abundance indices</span></span>
 <span><span class="st">}</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">}</span></span>
 <span><span class="st">"</span></span></code></pre></div>
-<p>We have the following abundance index data</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Abundance indices data</span></span>
-<span><span class="co"># Nivelle</span></span>
-<span></span>
-<span><span class="va">data_AI</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span></span>
-<span>AI <span class="op">=</span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span><span class="fl">6</span>, <span class="fl">17</span>, <span class="fl">12</span>, <span class="fl">17</span>, <span class="fl">11</span>, <span class="fl">22</span>, <span class="fl">16</span>, <span class="fl">25</span>, <span class="fl">25</span>, <span class="fl">15</span>, <span class="fl">11</span>,</span>
-<span><span class="fl">4</span>, <span class="fl">10</span>, <span class="fl">6</span>, <span class="fl">9</span>, <span class="fl">24</span>, <span class="fl">13</span>, <span class="fl">16</span>, <span class="fl">14</span>, <span class="fl">10</span>, <span class="fl">25</span>, <span class="fl">4</span>,</span>
-<span><span class="cn">NA</span>, <span class="fl">24</span>, <span class="cn">NA</span>, <span class="fl">63</span>, <span class="cn">NA</span>, <span class="cn">NA</span>, <span class="fl">21</span>, <span class="fl">41</span>, <span class="fl">44</span>, <span class="cn">NA</span>, <span class="fl">5</span><span class="op">)</span>,</span>
-<span></span>
-<span>I_pred<span class="op">=</span><span class="fl">65</span>, </span>
-<span></span>
-<span>AI_pred <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">5</span>, <span class="fl">6</span>, <span class="fl">7</span>, <span class="fl">8</span>, <span class="fl">9</span>, <span class="fl">10</span>, <span class="fl">11</span>, <span class="fl">12</span>, <span class="fl">13</span>, <span class="fl">14</span>, <span class="fl">15</span>, <span class="fl">16</span>, <span class="fl">17</span>, <span class="fl">18</span>, <span class="fl">19</span>, <span class="fl">20</span>, <span class="fl">21</span>, <span class="fl">22</span>, <span class="fl">23</span>, <span class="fl">24</span>, <span class="fl">25</span>,</span>
-<span><span class="fl">26</span>, <span class="fl">27</span>, <span class="fl">28</span>, <span class="fl">29</span>, <span class="fl">30</span>, <span class="fl">31</span>, <span class="fl">32</span>, <span class="fl">33</span>, <span class="fl">34</span>, <span class="fl">35</span>, <span class="fl">36</span>, <span class="fl">37</span>, <span class="fl">38</span>, <span class="fl">39</span>, <span class="fl">40</span>, <span class="fl">41</span>, <span class="fl">42</span>, <span class="fl">43</span>, <span class="fl">44</span>, <span class="fl">45</span>, <span class="fl">46</span>, <span class="fl">47</span>, <span class="fl">48</span>,</span>
-<span><span class="fl">49</span>, <span class="fl">50</span>, <span class="fl">51</span>, <span class="fl">52</span>, <span class="fl">53</span>, <span class="fl">54</span>, <span class="fl">55</span>, <span class="fl">56</span>, <span class="fl">57</span>, <span class="fl">58</span>, <span class="fl">59</span>, <span class="fl">60</span>, <span class="fl">61</span>, <span class="fl">62</span>, <span class="fl">63</span>, <span class="fl">64</span>, <span class="fl">65</span><span class="op">)</span></span>
-<span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_AI</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">model_string_AI</span><span class="op">)</span>, </span>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">ai_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">ai_model_str</span><span class="op">)</span>, </span>
 <span>                    data <span class="op">=</span><span class="va">SucRemNivelle</span>,<span class="co">#c(dataList$value, data_AI),</span></span>
-<span>                    n.chains <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span>                    n.chains <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Compiling model graph</span></span>
 <span><span class="co">#&gt;    Resolving undeclared variables</span></span>
 <span><span class="co">#&gt;    Allocating nodes</span></span>
@@ -420,23 +1132,90 @@ technique<a class="anchor" aria-label="anchor" href="#fitting-the-simple-indepen
 <span><span class="co">#&gt; Initializing model</span></span>
 <span></span>
 <span><span class="co"># Inferences</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">model_AI</span>, n.iter <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span>
-<span><span class="va">posterior_sample_AI</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span></span>
-<span>  <span class="va">model_AI</span>,</span>
-<span>  variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c1"</span>, <span class="st">"d1"</span>, <span class="st">"mu.d"</span>, <span class="st">"mu.p"</span>, <span class="st">"sd.d"</span>, <span class="st">"sd.p"</span>,</span>
-<span>                     <span class="st">"pi"</span>, <span class="st">"d"</span>, <span class="st">"nu"</span>, <span class="st">"phi"</span>, <span class="st">"k"</span>, <span class="st">"f"</span>, <span class="st">"mu.AI"</span>, </span>
-<span>                     <span class="st">"d_pred"</span>, <span class="st">"mu.AI_pred"</span><span class="op">)</span>,</span>
-<span>  n.iter <span class="op">=</span> <span class="fl">20000</span>,</span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">ai_model</span>, n.iter <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
+<span><span class="va">ai_posterior_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span></span>
+<span>  <span class="va">ai_model</span>,</span>
+<span>  variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>, <span class="st">"d"</span>, <span class="st">"mu_d"</span>, <span class="st">"mu_p"</span>, <span class="st">"sd_d"</span>, <span class="st">"sd_p"</span>,</span>
+<span>                     <span class="st">"pi"</span>, <span class="st">"delta"</span>, <span class="st">"nu"</span>, <span class="st">"phi"</span>, <span class="st">"k"</span>, <span class="st">"f"</span>, <span class="st">"mu_AI"</span>, </span>
+<span>                     <span class="st">"delta_pred"</span>, <span class="st">"mu_AI_pred"</span><span class="op">)</span>,</span>
+<span>  n.iter <span class="op">=</span> <span class="fl">10000</span>,</span>
 <span>  thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="plotting-the-results">Plotting the results<a class="anchor" aria-label="anchor" href="#plotting-the-results"></a>
-</h2>
-<p>Figure 10.13 page 253, posterior distributions of parameters for the
-full AI + successive removal model</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df_AI</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">posterior_sample_AI</span><span class="op">)</span></span>
-<span><span class="va">df_AI</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">ai_posterior_sample</span><span class="op">)</span>,</span>
+<span>                <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">default_convergence_measures</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">variable</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>, <span class="st">"d"</span>, </span>
+<span>                         <span class="st">"mu_d"</span>, <span class="st">"mu_p"</span>, <span class="st">"sigma_d"</span>, <span class="st">"sigma_p"</span>,  </span>
+<span>                         <span class="st">"phi"</span>, <span class="st">"k"</span>, <span class="st">"mu_AI"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  </span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left">variable</th>
+<th align="right">rhat</th>
+<th align="right">ess_bulk</th>
+<th align="right">ess_tail</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">a</td>
+<td align="right">1.0005142</td>
+<td align="right">1777.6952</td>
+<td align="right">2573.62550</td>
+</tr>
+<tr class="even">
+<td align="left">b</td>
+<td align="right">1.0004584</td>
+<td align="right">2013.1244</td>
+<td align="right">2645.77014</td>
+</tr>
+<tr class="odd">
+<td align="left">c</td>
+<td align="right">1.0065860</td>
+<td align="right">905.0429</td>
+<td align="right">1638.84610</td>
+</tr>
+<tr class="even">
+<td align="left">d</td>
+<td align="right">1.0056234</td>
+<td align="right">688.4648</td>
+<td align="right">1417.10358</td>
+</tr>
+<tr class="odd">
+<td align="left">k</td>
+<td align="right">1.0028519</td>
+<td align="right">477.5125</td>
+<td align="right">976.43643</td>
+</tr>
+<tr class="even">
+<td align="left">mu_d</td>
+<td align="right">1.0021109</td>
+<td align="right">691.8477</td>
+<td align="right">1235.81052</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_p</td>
+<td align="right">0.9999183</td>
+<td align="right">2460.4196</td>
+<td align="right">2739.95838</td>
+</tr>
+<tr class="even">
+<td align="left">phi</td>
+<td align="right">1.0242515</td>
+<td align="right">124.0918</td>
+<td align="right">62.51027</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-traces.html" class="external-link">mcmc_trace</a></span><span class="op">(</span><span class="va">ai_posterior_sample</span>, </span>
+<span>           pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"delta[5]"</span>, <span class="st">"pi[5]"</span>,</span>
+<span>                    <span class="st">"delta[10]"</span>, <span class="st">"pi[10]"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="hierarchical-successive-removal_files/figure-html/trace-ai-1.png" width="700"></p>
+<div class="section level3">
+<h3 id="results-and-analysis">Results and analysis<a class="anchor" aria-label="anchor" href="#results-and-analysis"></a>
+</h3>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw_ai</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">ai_posterior_sample</span><span class="op">)</span></span>
+<span><span class="va">dfw_ai</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="st">"mu_d"</span>, <span class="st">"sd_d"</span>, <span class="st">"mu_p"</span>,  <span class="st">"sd_p"</span>, <span class="st">"phi"</span>, <span class="st">"k"</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>  <span class="fu">GGally</span><span class="fu">::</span><span class="fu"><a href="https://ggobi.github.io/ggally/reference/ggpairs.html" class="external-link">ggpairs</a></span><span class="op">(</span></span>
 <span>  columnLabels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mu[delta]"</span>, <span class="st">"sigma[delta]"</span>, <span class="st">"mu[pi]"</span>,  <span class="st">"sigma[pi]"</span>, <span class="st">"phi"</span>, <span class="st">"k"</span><span class="op">)</span>,</span>
@@ -444,59 +1223,59 @@ full AI + successive removal model</p>
 <span>  lower <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>continuous <span class="op">=</span> <span class="fu"><a href="https://ggobi.github.io/ggally/reference/wrap.html" class="external-link">wrap</a></span><span class="op">(</span><span class="st">"points"</span>, alpha <span class="op">=</span> <span class="fl">0.3</span>,size <span class="op">=</span> <span class="fl">.5</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_linedraw</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span>, base_line_size <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>axis.ticks <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_line</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">/</span><span class="fl">22</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>axis.ticks <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_line</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">/</span><span class="fl">22</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Posterior distributions of parameters for the full AI + successive removal model."</span><span class="op">)</span></span></code></pre></div>
 <p><img src="hierarchical-successive-removal_files/figure-html/plot-10-13-1.png" width="700"></p>
-<p>Figure 10.14 page 249, marginal posterior distributions of salmon
-densities (<span class="math inline">\(\delta\)</span>) for each site
-index.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_hier_l</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">posterior_sample_hier</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"hierarchical"</span><span class="op">)</span></span>
-<span><span class="va">fit_ind_l</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">posterior_sample</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"independent"</span><span class="op">)</span></span>
-<span><span class="va">fit_ai_l</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">posterior_sample_AI</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"abundance_index"</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">fit_hier_l</span>, <span class="va">fit_ind_l</span>, <span class="va">fit_ai_l</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^d\\."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<p>The statistical Bayesian learning machinery provides informative
+posterior distribution for <span class="math inline">\(\phi\)</span> and
+<span class="math inline">\(k\)</span>:</p>
+<ul>
+<li>
+<span class="math inline">\(\phi\)</span> is far from uniform, its
+posterior pdf varies around <span class="math inline">\(0.65\)</span>
+</li>
+<li>
+<span class="math inline">\(k\)</span> varies close to <span class="math inline">\(150\)</span> with a small standard deviation</li>
+</ul>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfl_ind</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">ind_posterior_sample</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Model <span class="op">=</span> <span class="st">"Independent"</span><span class="op">)</span></span>
+<span><span class="va">dfl_ai</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">ai_posterior_sample</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Model <span class="op">=</span> <span class="st">"Abundance Index"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">dfl_hier</span>, <span class="va">dfl_ind</span>, <span class="va">dfl_ai</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^delta\\."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span><span class="st">"delta"</span> <span class="op">=</span> <span class="va">value</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Site <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="co"># 6 = length("d.") + 1</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Site <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">7</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span>  <span class="co"># 7 = length("delta.") + 1</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Site</span>, y <span class="op">=</span> <span class="va">delta</span>, fill <span class="op">=</span> <span class="va">model</span> <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Site</span>, y <span class="op">=</span> <span class="va">delta</span>, fill <span class="op">=</span> <span class="va">Model</span> <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, outlier.size <span class="op">=</span> <span class="fl">.25</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_discrete.html" class="external-link">scale_x_discrete</a></span><span class="op">(</span>guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/guide_axis.html" class="external-link">guide_axis</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0.75</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gray10"</span>, <span class="st">"gray50"</span>, <span class="st">"gray90"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Fish density"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Removed 2448 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="st">"Marginal posterior distributions of salmon densities delta for each site index."</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Removed 1161 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
 <p><img src="hierarchical-successive-removal_files/figure-html/plot-10-14-1.png" width="700"></p>
-<p>Figure 10.17 page 251: Posterior means of Salmon juvenile density
-(under hierarchical bayesian model) versus observed Abundance
-Indices.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df_delta_AI</span>  <span class="op">&lt;-</span> <span class="va">fit_hier_l</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^d\\."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span><span class="st">"delta"</span> <span class="op">=</span> <span class="va">value</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Site <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">Site</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>mean_delta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">delta</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>abundance <span class="op">=</span> <span class="va">data_AI</span><span class="op">$</span><span class="va">AI</span><span class="op">)</span></span>
-<span><span class="va">df_delta_AI</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">abundance</span>, y <span class="op">=</span> <span class="va">mean_delta</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">.4</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">xlim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">70</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Abundance indices"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Estimated fish density"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Removed 5 rows containing missing values (geom_point).</span></span></code></pre></div>
-<p><img src="hierarchical-successive-removal_files/figure-html/plot-10-17-1.png" width="700"></p>
-<p>Figure 10.20 page 254: Predictive posterior distribution of Salmon
-juvenile density versus Abundance Indices (50% and 95% credible
-interval).</p>
-<p>Warning: La légende du libre n’est pas correct, il s’agit
-d’intervalle de crédibilité à 80%.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_ai_l</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^d_pred."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>AI <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<p>The figure makes clear the shrinkage effect due to hierarchical
+modeling: with the hierarchical model, the densities are less dispersed
+around the grand mean. Sharing information between sites allows for more
+precise estimations of the local fish densities. The black
+boxplotsdepict the posterior pdf of fish density <span class="math inline">\(\delta\)</span> when modeling jointly the
+successive removals and the <span class="math inline">\(AI\)</span>’s.
+When compared to the previous model without taking into account the
+information conveyed by the abundance index (grey boxplots), we see that
+there is only a small shrinkage effect: although the 50% credible
+intervals are generally narrower, <em>i.e.</em>, we learn something from
+the <span class="math inline">\(AI\)</span> sample but not that
+markedly. Site <span class="math inline">\(26\)</span> bears a
+noticeable exception that can be explained by contradictory information
+brought by successive removals and by AI. If we were to trust the
+successive removal model only, the juvenile density for site <span class="math inline">\(26\)</span> should be around <span class="math inline">\(0.3\)</span> and, as <span class="math inline">\(k\)</span> is close to <span class="math inline">\(140\)</span>, we should expect a value of <span class="math inline">\(150\times0.3=45\)</span> individuals for the
+abundance index, but we actually observed <span class="math inline">\(63\)</span> juveniles in the <span class="math inline">\(AI\)</span> data!</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfl_ai</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^delta_pred."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>AI <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">12</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span><span class="st">"delta_pred"</span> <span class="op">=</span> <span class="va">value</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">AI</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>qs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">delta_pred</span>, </span>
@@ -511,34 +1290,27 @@ d’intervalle de crédibilité à 80%.</p>
 <span>  mapping <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">abundance</span>, y <span class="op">=</span> <span class="va">mean_delta</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Abundance indices"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Posterior predictive of fish density"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Predictive posterior distribution of Salmon juvenile density versus Abundance Indices (50% and 95% credible interval)"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `summarise()` has grouped output by 'AI'. You can override using the `.groups`</span></span>
 <span><span class="co">#&gt; argument.</span></span>
 <span><span class="co">#&gt; Warning: Removed 5 rows containing missing values (geom_point).</span></span></code></pre></div>
-<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-6-1.png" width="700"></p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_ai_l</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="st">"^d_pred."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>AI <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">parameter</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span><span class="st">"delta_pred"</span> <span class="op">=</span> <span class="va">value</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">AI</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>qs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">delta_pred</span>, </span>
-<span>                          <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">.025</span>, <span class="fl">.25</span>, <span class="fl">.5</span>, <span class="fl">.75</span>, <span class="fl">.975</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>                          prob <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">.025</span>, <span class="fl">.25</span>, <span class="fl">.5</span>, <span class="fl">.75</span>, <span class="fl">.975</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_wider.html" class="external-link">pivot_wider</a></span><span class="op">(</span>names_from <span class="op">=</span> <span class="va">prob</span>, values_from <span class="op">=</span>  <span class="va">qs</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">AI</span>, y <span class="op">=</span> <span class="va">`0.5`</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_ribbon.html" class="external-link">geom_ribbon</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>ymin <span class="op">=</span> <span class="va">`0.025`</span>, ymax <span class="op">=</span> <span class="va">`0.975`</span><span class="op">)</span>, fill <span class="op">=</span> <span class="st">"gray50"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_ribbon.html" class="external-link">geom_ribbon</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>ymin <span class="op">=</span> <span class="va">`0.25`</span>, ymax <span class="op">=</span> <span class="va">`0.75`</span><span class="op">)</span>, fill <span class="op">=</span> <span class="st">"gray75"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">df_delta_AI</span>,</span>
-<span>  mapping <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">abundance</span>, y <span class="op">=</span> <span class="va">mean_delta</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Abundance indices"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Posterior predictive of fish density"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span></span>
-<span><span class="co">#&gt; `summarise()` has grouped output by 'AI'. You can override using the `.groups`</span></span>
-<span><span class="co">#&gt; argument.</span></span>
-<span><span class="co">#&gt; Warning: Removed 5 rows containing missing values (geom_point).</span></span></code></pre></div>
-<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-7-1.png" width="700"></p>
+<p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-11-1.png" width="700"></p>
+<p>The figure shows that the index of abundance alone allows for
+differentiation between contrasting levels of fish density without
+recourse to the successive removal technique in the future. Yet fairly
+imprecise, this rapid sampling technique also provides the corresponding
+confidence bounds that match the cloud made by the posterior means of
+Salmon juvenile density (under the HBM model) and the Abundance Indices
+observed in the dataset.</p>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-hbm4eco" class="csl-entry">
+Parent, E., and E. Prévost. 2013. <em>Introduction to Hierarchical
+Bayesian Modeling for Ecological Data</em>. CRC press Boca Raton,
+Florida.
+</div>
+</div>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>

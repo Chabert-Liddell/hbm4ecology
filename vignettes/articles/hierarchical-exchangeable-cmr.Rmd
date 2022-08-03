@@ -20,9 +20,7 @@ knitr::opts_chunk$set(
 library(hbm4ecology)
 library(rjags)
 library(tidyverse)
-library(GGally)
 library(posterior)
-library(bayesplot)
 ```
 
 
@@ -445,12 +443,13 @@ dfl_hier %>%
   theme_classic(base_size = 15L)
 ```
 
-```{r}
-dfw_hier %>% 
-  select(mu1_ab, u1_ab) %>%
-  ggplot(aes(x = mu1_ab, y = u1_ab)) +
-  geom_density2d()
-```
+<!-- ```{r} -->
+<!-- dfw_hier %>%  -->
+<!--   select(mu1_ab, u1_ab) %>% -->
+<!--   ggplot(aes(x = mu1_ab, y = u1_ab)) + -->
+<!--   geom_density2d() -->
+<!-- ``` -->
+
 
 A straightforward result of the hierarchical model are the posterior predictive distributions of the trapping or recapture efficiencies and of the number of returns , denoted $[\pi^{1,new}|data_{1984:2000}]$ and $[\pi^{2,new}|data_{1984:2000}]$, and $[\nu^{new}|data_{1984:2000}],$ respectively. The posterior predictive of the recapture efficiency and of the returns are  informative distributions. Thus, the data of all years combined allow discarding *a priori* the possibility of very
 high trapping efficiency (*i.e.*, greater than 0.5) or high spawner population size (*i.e.*, greater than a thousand) in any additional year.
