@@ -18,7 +18,12 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(hbm4ecology)
 library(rstan)
+library(posterior)
 library(tidyverse)
+#plot_theme <- theme_set(theme_classic(base_size = 15L))
+plot_theme <-  theme_classic(base_size = 15L) + theme(axis.text.x =  element_text(angle = 90),
+                                  strip.background = element_rect(fill = "#4da598"),
+                                  strip.text = element_text(size = 15))
 ```
 
 
@@ -63,38 +68,14 @@ tibble(
 ) %>% knitr::kable()
 ```
 
-<!-- |River        |Country    | Latitude| Area accessible to salmon| -->
-<!-- |:------------|:----------|--------:|-------------------------:| -->
-<!-- |Nivelle      |France     | 43.50000|                    320995| -->
-<!-- |Oir          |France     | 48.50000|                     48000| -->
-<!-- |Frome        |England    | 50.50000|                    876420| -->
-<!-- |Dee          |England    | 53.00000|                   6170000| -->
-<!-- |Burrishoole  |Ireland    | 53.98515|                    155000| -->
-<!-- |Lune         |England    | 54.50000|                   4230000| -->
-<!-- |Bush         |N. Ireland | 55.00000|                    845500| -->
-<!-- |Mourne       |N. Ireland | 55.00000|                  10360560| -->
-<!-- |Faughan      |N. Ireland | 55.00000|                    882380| -->
-<!-- |Girnock Burn |Scotland   | 57.00000|                     58764| -->
-<!-- |North Esk    |Scotland   | 57.00000|                   2100000| -->
-<!-- |Laerdalselva |Norway     | 61.00000|                    704000| -->
-<!-- |Ellidaar     |Iceland    | 64.00000|                    199711| -->
 
-
-<!-- | River | Country | Latitude (${{}^{\circ}}$N) | Riverine wetted area accessible to salmon ($m^{2}$) | Number of SR observations (years) | -->
-<!-- |------|_________|___________|_______________________________|_______________| -->
-<!-- | Nivelle | France | $43$ | $320995$ | $12$ | -->
-<!-- | Oir | France | $48.5$ | $48000$ | $14$ | -->
-<!-- | Frome | England | $50.5$ | $876420$ | $12$ | -->
-<!-- | Dee | England | $53$ | $6170000$ | $9$ | -->
-<!-- | Burrishoole | Ireland | $54$ | $155000$ | $12$ | -->
-<!-- | Lune | England | $54.5$ | $4230000$ | $7$ | -->
-<!-- | Bush | N. Ireland | $55$ | $845500$ | $13$ | -->
-<!-- | Mourne | N. Ireland | $55$ | $10360560$ | $13$ | -->
-<!-- | Faughan | N. Ireland | $55$ | $882380$ | $11$ | -->
-<!-- | Girnock Burn | Scotland | $57$ | $58764$ | $12$ | -->
-<!-- | North Esk | Scotland | $57$ | $2100000$ | $6$ | -->
-<!-- | Laerdalselva | Norway | $61$ | $704000$ | $8$ | -->
-<!-- | Ellidaar | Iceland | $64$ | $199711$ | $10$ | -->
+```{r}
+tib <- tibble(Obs = seq(SRSalmon$n),
+              River = SRSalmon$riv,
+              Stock = SRSalmon$S,
+              Recruitment = SRSalmon$R)
+knitr::kable(bind_rows(head(tib), tail(tib)))
+```
 
 <center>
 
@@ -103,14 +84,6 @@ available stock-recruitment datasets for A. salmon (from  @Prevost2003).](figure
 
 </center>
 
-<!-- \begin{figure}[h] -->
-<!-- \begin{center} -->
-<!-- \includegraphics[width=1.0\textwidth]{Figchapter5x6/SRSalmon/Map_13rivers.pdf} -->
-<!-- \end{center} -->
-<!-- \caption[Location of the 13 index rivers]{Location of the 13 index rivers with -->
-<!-- available stock-recruitment datasets for A. salmon (from \cite{Prevost+03}).}% -->
-<!-- \label{Fig5x6:Map_13rivers}% -->
-<!-- \end{figure} -->
 
 There are several hundreds of salmon stocks in the northeast Atlantic area,
 each having its own characteristics with regard to the size and productivity
@@ -127,53 +100,33 @@ used to obtain the data ready for SR analysis presented in Table
 are described in detail in @Crozier2003 or @Prevost2003.
 Here, hierarchical modeling will be used to address two questions:
 
-\begin{itemize}
-\item How is the SR information transferred from the monitored data-rich
+* How is the SR information transferred from the monitored data-rich
 rivers to set Biological Reference Points for other sparse-data salmon rivers,
 while accounting for the major sources of uncertainty?
-
-\item How can the joint analysis of the SR relationship for the 13 index
+* How can the joint analysis of the SR relationship for the 13 index
 rivers be used to forecast biological reference points for a new river without
 any SR data but for which relevant covariates are available?
-\end{itemize}
-
-<!-- \begin{figure}[ph] -->
-<!-- \begin{center} -->
-<!-- \includegraphics[width=0.9\textwidth]{Figchapter5x6/SRSalmon/FittedSR_13rivers.png} -->
-<!-- \end{center} -->
-<!-- \caption[Fitted SR relationships for the 13 monitored rivers]{The Atlantic -->
-<!-- salmon SR series on the 13 index rivers and fitted SR relationships. $S$ -->
-<!-- (\emph{x}-axis) and $R$ (\emph{y}-axis) are the stock and recruitment -->
-<!-- variables after standardization for river size expressed in eggs per $m^{2}$ -->
-<!-- of riverine wetted area accessible to salmon. The SR Ricker curves are graphed -->
-<!-- for two model configurations, the model assuming independence between rivers -->
-<!-- (thin line) and the hierarchical model (bold line). SR curves are graphed with -->
-<!-- parameters ($S^{\ast},h^{\ast}$) set at the median of their marginal posterior -->
-<!-- distributions.}% -->
-<!-- \label{Fig5x6:FittedSR_13rivers}% -->
-<!-- \end{figure} -->
-
-<!-- Parent E. and Rivot E. - An introduction to Hierarchcial Modeling of Ecological Data Chapman et al. 2012 -->
-
-<!-- Stan program for Hierarchical Stock-recruitment analysis (with covariates Latitude) Chapter 9 - section 9.3 -->
-
 
 
 # Model without covariates
 
 Ricker model with lognormal errors and management related parametrization
 
-- $\log(R_{k,t}) = h_{k}^{*} + \log(\frac{S_{k,t}}{1-h^{*}{t}}) - \frac{h^{*}_{k}}{S^{*}_{k}}S_{k,t} + \epsilon_{k,t}$
-- $\epsilon_{k,t} \overset{iid}{\sim} Normal(0, \sigma_k^2)$
+* $\log(R_{k,t}) = h_{k}^{*} + \log(\frac{S_{k,t}}{1-h^{*}{t}}) - \frac{h^{*}_{k}}{S^{*}_{k}}S_{k,t} + \epsilon_{k,t}$
+* $\epsilon_{k,t} \overset{iid}{\sim} Normal(0, \sigma_k^2)$
 
 ### Defining priors for the model 
 
-- $h_k^* \sim Beta(1,1)$
-- $\tau = \sigma^{-2} \sim Gamma(p = 10^{-3},q = 10^{-3})$ with $\sigma_k = k$, $\forall k$
+* $h_k^* \sim Beta(1,1)$
+* $\tau = \sigma^{-2} \sim Gamma(p = 10^{-3},q = 10^{-3})$ with $\sigma_k = \sigma$, $\forall k$
 
 With two different elicitation for $S^*_k$:
 
-A more refined gamma elicitation:
+a simple uniform ellicitation:
+
+* $S_k^* \sim Uniform(0,200)$
+
+or a more refined gamma elicitation:
 
 - $\mu_{S^*} = 40 \text{eggs/$m^2$}$
 - $CV_{S^*} = 1$
@@ -181,20 +134,25 @@ A more refined gamma elicitation:
 - $b = \mu_{S^*}^{-1}CV_{S^*}^{-2}$
 - $S_k^* \sim Gamma(a,b) \mathbf{1}_{S_k^* < 200}$
 
-A simple uniform:
-
-- $S_k^* \sim Uniform(0,200)$
 
 
-<center>
 
-![Directed acyclic graph of the stock recruitment model with covariates](figures/SRSalmon/DAGHierSRLatitude.png){width=70% height=70%}
 
-</center>
 
-### Writing the model in stan
+
+
+## Implementation and esimation of the models in Stan
+
+
 
 ```{r}
+glimpse(SRSalmon)
+```
+
+
+### Model with no covariates and with uniform ellicitation for $S^*$
+
+```{r unif-model}
 hsr_model_stan <- "
 data {
   int n_riv; // Number of rivers
@@ -245,65 +203,19 @@ model {
 "
 ```
 
-```{r}
-data("SRSalmon")
-# data <- list(
-# 
-# n_riv = 13, 
-# 
-# n_obs = c(12,14,12,9,12,7,13,13,11,12,6,8,10),
-# 
-# n = 139, 
-# 
-# riv = c(
-# 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-# 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
-# 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
-# 4, 4, 4, 4, 4, 4, 4, 4, 4, 
-# 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
-# 6, 6, 6, 6, 6, 6, 6, 
-# 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 
-# 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 
-# 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 
-# 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 
-# 11, 11, 11, 11, 11, 11, 
-# 12, 12, 12, 12, 12, 12, 12, 12, 
-# 13, 13, 13, 13, 13, 13, 13, 13, 13, 13),
-# 
-# S = c(0.957, 0.501, 2.286, 1.481, 1.596, 2.679, 2.323, 1.645, 2.210, 3.764, 2.470, 1.391, 
-# 12.956, 12.084, 10.523, 2.762, 8.278, 6.943, 5.135, 1.540, 2.262, 3.437, 8.305, 5.231, 7.889, 1.621,
-# 5.785, 6.504, 7.325, 10.052, 11.969, 8.660, 5.192, 2.354, 2.494, 3.172, 2.887, 2.921, 
-# 2.399, 3.793, 0.989, 1.621, 1.538, 1.822, 3.872, 1.913, 2.364,
-# 4.059, 7.377, 8.705, 6.032, 6.159, 7.653, 3.477, 7.250, 4.134, 6.441, 6.062, 6.013,
-# 2.199, 1.844, 2.364, 1.395, 2.979, 2.388, 2.080, 
-# 1.384, 3.584, 5.665, 4.057, 5.441, 1.254, 2.886, 3.513, 3.040, 3.548, 2.661, 1.727, 1.833, 
-# 0.296, 1.284, 0.992, 0.366, 1.193, 1.496, 1.818, 1.258, 1.169, 2.813, 3.136, 1.189, 1.414, 
-# 3.914, 16.788, 9.091, 1.678, 5.970, 15.327, 11.944, 7.955, 13.640, 16.008, 24.593, 
-# 4.765, 2.467, 3.454, 9.036, 9.206, 3.540, 2.382, 4.680, 2.876, 1.021, 3.046, 5.428, 
-# 11.381, 11.425, 18.308, 14.920, 17.584, 17.733, 
-# 6.331, 5.269, 6.369, 4.913, 6.129, 5.782, 5.383, 2.376, 
-# 37.010, 37.303, 28.337, 16.790, 37.955, 42.157, 32.309, 34.869, 24.022, 31.268), 
-# 
-# R = c(2.647, 0.444, 1.801, 0.573, 0.356, 0.390, 3.598, 2.357, 2.026, 0.665, 0.834, 1.433,
-# 8.247, 1.328, 2.744, 4.511, 5.174, 0.846, 4.278, 1.237, 3.429, 4.491, 5.440, 2.797, 5.997, 0.442, 
-# 13.278, 13.266, 9.062, 5.269, 2.919, 3.467, 4.080, 3.757, 3.828, 4.397, 4.640, 5.370, 
-# 2.617, 3.141, 4.205, 3.655, 3.898, 3.333, 2.792, 3.877, 3.290, 
-# 15.226, 27.525, 8.615, 16.634, 13.926, 16.805, 17.668, 25.368, 12.232, 18.723, 16.516, 21.778, 
-# 5.114, 5.145, 4.207, 3.491, 3.412, 3.759, 4.248, 
-# 17.341, 6.301, 11.328, 14.334, 15.589, 19.808, 12.307, 9.313, 6.717, 10.268, 18.339, 5.982, 5.817, 
-# 3.727, 4.675, 5.681, 3.932, 3.653, 8.789, 9.800, 3.715, 4.419, 3.435, 2.991, 4.184, 2.309, 
-# 18.657, 47.897, 37.326, 24.859, 42.626, 50.024, 42.996, 62.642, 76.854, 26.009, 14.744,
-# 11.766, 3.594, 8.026, 6.119, 7.735, 7.152, 5.919, 9.419, 6.065, 4.016, 10.110, 4.438, 
-# 20.154, 20.791, 26.458, 19.724, 16.823, 21.693, 
-# 15.323, 13.202, 15.969, 17.781, 18.242, 16.253, 10.899, 5.724, 
-# 150.747, 108.681, 104.854, 110.264, 111.579, 139.799, 124.208, 85.049, 73.261, 71.534)
-# 
-# ) 
+
+
+```{r unif-compil, cache=TRUE}
+model_name <-"HSR_Ricker_LogN_Management"
+sm <- stan_model(model_code =  hsr_model_stan,
+                 model_name =  model_name
+)
 ```
 
 
-```{r cache=TRUE}
-#options(mc.cores = parallel::detectCores())
+```{r unif-sample, cache=TRUE, message=FALSE}
+options(mc.cores = parallel::detectCores())
+set.seed(1234)
 # Number iteration for the "warm up" phase
 n_warm <- 2500
 # Number iteration for inferences
@@ -312,27 +224,7 @@ n_thin <- 1
 # Number of chains
 n_chains <- 4
 
-#STAN_model_SRMargaree_Ricker_LogN_Management <- 
-#  STAN_model_SRMargaree_Ricker_LogN_Management.stan
-
-
-# ------------------------------------------------------------------------------------
-# HMC config.
-# ------------------------------------------------------------------------------------
-# Run model
-# ------------------------------------------------------------------------------------
-
-# Load/check model, load data and inits
-
-# model_code <- stanc(file = "./STAN_SRMargaree_Ricker_LogN_Management.stan")
-model_name <-"HSR_Ricker_LogN_Management"
-sm <- stan_model(model_code =  hsr_model_stan,
-                 model_name =  model_name
-)
-params<-c("Sopt","hopt","tau")
 # Inferences
-
-
 fit <- sampling(object = sm,
                 data = SRSalmon, 
                 pars = NA, #params,
@@ -340,58 +232,48 @@ fit <- sampling(object = sm,
                 iter = n_iter, 
                 warmup = n_warm, 
                 thin = n_thin, 
-                control = list("adapt_delta" = .85)
+                control = list("adapt_delta" = .85) # Acceptance rate up from .8 to remove some divergent transitions
                 #control = list("max_treedepth" = 12)
 )
+```
 
-stan_rhat(fit,pars = params )
-summary(fit)
-# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
-# 
-# plot(fit, plotfun = "hist", pars = params, include = TRUE)+ 
-#   ggtitle("Posterior distributions for main parameters")
-# pairs(x = fit, 
-#       pars = params
-#  )
-# print(fit)
-# plot(fit)
-# traceplot(fit, "lp__", inc_warmup=TRUE)
-# plot(fit, show_density = TRUE, ci_level = 0.5, fill_color = "purple")
-# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
-# plot(fit, plotfun = "rhat") + ggtitle("Example of adding title to plot")
+Diagnostic of the convergence:
+
+
+```{r unif-diagnostic}
+params<-c("Sopt","hopt","tau")
+stan_rhat(fit)
+monitor(rstan::extract(fit, pars = params, permuted = FALSE, inc_warmup = TRUE))
+print(fit, par = c("lp__", params) )
 ```
 
 ```{r}
-ar <-  rstan::extract(fit, pars= "Sopt",  permuted=FALSE, inc_warmup=FALSE)
-df <- lapply(seq(n_chains), 
-              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
-                                                         chains = as_factor(eval(c)))) %>% 
-  bind_rows()
+dfw_unif <- extract_wider(fit)
+dfl_unif <- extract_longer(fit)
 
-df %>% pivot_longer(cols = starts_with("Sopt")) %>% 
-  ggplot() +
-  aes(y = log(value), group = name) +
-  geom_boxplot()
+dfl_unif %>% 
+  filter(str_detect(parameter, "Sopt")) %>% 
+  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>% 
+  ggplot(aes(y = log(value), x = Site)) +
+  geom_boxplot(fill = "grey80") +
+  ylab("log(S*)") +
+  plot_theme
 
 ```
 
 ```{r}
-ar <-  rstan::extract(fit, pars= "hopt",  permuted=FALSE, inc_warmup=FALSE)
-df <- lapply(seq(n_chains), 
-              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
-                                                         chains = as_factor(eval(c)))) %>% 
-  bind_rows()
-
-df %>% pivot_longer(cols = starts_with("hopt"), values_to = "h*") %>% 
-  ggplot() +
-  aes(y = `h*`, group = name) +
-  geom_boxplot()
-
+dfl_unif %>% 
+  filter(str_detect(parameter, "hopt")) %>% 
+  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("hopt.") + 1))]) %>% 
+  ggplot(aes(y = log(value), x = Site)) +
+  geom_boxplot(fill = "grey80") +
+  ylab("log(h*)") +
+  plot_theme
 ```
 
-#### With Gamma prior for S
+### Model with no covariates and with Gamma prior for $S*$
 
-```{r}
+```{r gamma-model}
 hsr_model_indep_S_gamma_stan <- "
 data {
   int n_riv; // Number of rivers
@@ -442,8 +324,17 @@ model {
 "
 ```
 
-```{r cache = TRUE}
-#options(mc.cores = parallel::detectCores())
+```{r gamma-compil, cache = TRUE, message=FALSE}
+
+model_name <-"HSR_Ricker_LogN_Management_S_gamma"
+sm <- stan_model(model_code =  hsr_model_indep_S_gamma_stan,
+                 model_name =  model_name
+)
+```
+
+
+```{r gamma-fit, cache = TRUE}
+set.seed(1234)
 # Number iteration for the "warm up" phase
 n_warm <- 2500
 # Number iteration for inferences
@@ -451,10 +342,7 @@ n_iter <- 5000
 n_thin <- 1
 # Number of chains
 n_chains <- 4
-model_name <-"HSR_Ricker_LogN_Management_S_gamma"
-sm <- stan_model(model_code =  hsr_model_indep_S_gamma_stan,
-                 model_name =  model_name
-)
+
 params<-c("Sopt","hopt","tau")
 # Inferences
 
@@ -465,59 +353,102 @@ fit <- sampling(object = sm,
                 chains = n_chains, 
                 iter = n_iter, 
                 warmup = n_warm, 
-                thin = n_thin,
-                control = list("adapt_delta" = .85)#max_treedepth" = 12)
+                thin = n_thin, 
+                control = list("adapt_delta" = .85)# Acceptance rate up from .8 to remove some divergent transitions
 )
+```
 
- stan_rhat(fit,pars = params )
-# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
-# 
-# plot(fit, plotfun = "hist", pars = params, include = TRUE)+ 
-#   ggtitle("Posterior distributions for main parameters")
-# pairs(x = fit, 
-#       pars = params
-# )
-# print(fit)
-# plot(fit)
-# traceplot(fit, "lp__", inc_warmup=TRUE)
-# plot(fit, show_density = TRUE, ci_level = 0.5, fill_color = "purple")
-# plot(fit, plotfun = "trace", pars = params, inc_warmup = TRUE)
-# plot(fit, plotfun = "rhat") + ggtitle("Example of adding title to plot")
+Diagnostic of the convergence:
+
+```{r gamma-diagnostic}
+params<-c("Sopt","hopt","tau")
+stan_rhat(fit)
+monitor(rstan::extract(fit, pars = params, permuted = FALSE, inc_warmup = TRUE))
+print(fit, par = c("lp__", params) )
 ```
 
 ```{r}
+dfw_gamma <- extract_wider(fit) %>% mutate(Model = "Gamma")
+dfl_gamma <- extract_longer(fit)
 
-ar <-  rstan::extract(fit, pars= "Sopt",  permuted=FALSE, inc_warmup=FALSE)
-df <- lapply(seq(n_chains), 
-              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
-                                                         chains = as_factor(eval(c)))) %>% 
-  bind_rows()
-
-df %>% 
-  pivot_longer(cols = starts_with("Sopt"), values_to = "Sopt") %>%
-  ggplot() +
-  aes(y = log(Sopt), group = name) +
-  geom_boxplot(fill = "grey80")  
+dfl_gamma %>% 
+  filter(str_detect(parameter, "Sopt")) %>% 
+  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>% 
+  ggplot(aes(y = log(value), x = Site)) +
+  geom_boxplot(fill = "grey80") +
+  ylab("log(S*)") +
+  plot_theme
 
 ```
 
 ```{r}
-ar <-  rstan::extract(fit, pars= "hopt",  permuted=FALSE, inc_warmup=FALSE)
-df <- lapply(seq(n_chains), 
-              function(c) as_tibble(ar[,c,]) %>% mutate(iterations = seq.int(nrow(ar[,c,])),
-                                                         chains = as_factor(eval(c)))) %>% 
-  bind_rows()
-
-df %>% pivot_longer(cols = starts_with("hopt"), values_to = "h*") %>%
-  ggplot() +
-  aes(y = `h*`, group = name) +
-  geom_boxplot() +
-  geom_boxplot(fill = "grey80")  
-
+dfl_gamma %>% 
+  filter(str_detect(parameter, "hopt")) %>% 
+  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("hopt.") + 1))]) %>% 
+  ggplot(aes(y = log(value), x = Site)) +
+  geom_boxplot(fill = "grey80") +
+  ylab("log(h*)") +
+  plot_theme
 ```
 
-### Hierarchical model with latitudinal covariates
 
+The choice of the prior distribution of $S^*$ does not make much difference on the posterior distribution estimate.
+
+
+```{r}
+bind_rows(dfl_unif %>% mutate (Model =  "Uniform"), dfl_gamma %>%  mutate(Model = "Gamma")) %>% 
+  filter(str_detect(parameter, "Sopt")) %>% 
+  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>%
+  ggplot(aes(x = log(value), linetype = Model, color = Model)) +
+  geom_density() +
+  facet_wrap(~ Site) + 
+  xlab("log(S*)") +
+  plot_theme
+```
+
+
+# Hierarchical model with latitudinal covariates
+
+The hierarchical modeling is designed to improve the estimation of parameters 
+$S^*$ and $h^*$ for data-poor rivers by borrowing strength from data-rich rivers.
+It is then designed to capture the between-rivers variability of the parameters 
+($S^*$, $h^*$) conditionnaly on the latitude.
+This can be done by introducing a log-linear relationship between the expectation 
+of $S^*_k$ and the latitude of the river $x_k$:
+
+* $\log(\mu_{S^*_k}) = \alpha x_k + \beta$
+* $\alpha \sim Uniform(-5,5)$
+* $\beta \sim Uniform(-50,50)$
+
+$S^*_k$ is drawn from a Gamma distribution which the parameters depend on the 
+latitude:
+
+* $CV_{S^*} ~ Uniform(0,20)$
+* $a_k = \frac{1}{CV_{S*}^2}$
+* $b_k = \frac{1}{\mu_{S^*_k}CV^2_{S^*}}$
+* $S^*_k \sim Gamma(a_k, b_k)1_{S^*_k<200}$
+
+Then we express the linear linear relationship between the expectation 
+of $h^*_k$ and the latitude of the river $x_k$ on a logit scale:
+
+* $logit(\mu_{h^*_k}) = \delta x_k + \kappa$
+* $\delta \sim Uniform(-5,5)$
+* $\kappa \sim Uniform(-50,50)$
+
+Given the expected mean in the logit scale, $logit(h_{k}^{\ast})$ for each
+river $k$ is drawn in a Normal distribution with expected mean 
+$logit(\mu_{h_{k}^{\ast}})$ and precision $\tau_{h^{\ast}}^{-2}$. A diffuse prior 
+is set on the precision:
+
+* $logit(h^*_k) \sim Normal(logit(\mu_k^*), \tau^2)$
+* $\tau^{-2} \sim Gamma(.001, .001)$
+
+
+<center>
+
+![Directed acyclic graph of the stock recruitment model with covariates](figures/SRSalmon/DAGHierSRLatitude.png){width=70% height=70%}
+
+</center>
 
 ```{r}
 hsr_model_hier_S_gamma_stan <- "
@@ -553,13 +484,14 @@ parameters {
   real<lower=-5, upper=5> delta;
   real<lower=-50, upper=50> kappa;
   real<lower=0> tau_h;
-  vector[n_riv] logit_h; // logit of hopt
+  vector[n_riv] logit_h;
+  //vector[n_riv] logit_h_raw; // centered parametrization for logit_h
 
 }
 
 transformed parameters {
   
-  real<lower=0> sigma; // stdev for lognormal noise
+  real<lower=0> sigma;      // stdev for lognormal noise
   
 //  vector[n_riv] log_mu_S; // log of the expected mean of Sopt
   vector<lower=0>[n_riv] mu_S; // Expected mean of Sopt  
@@ -568,8 +500,9 @@ transformed parameters {
   
   real<lower=0> sigma_h; // stdev for logit of h 
   vector[n_riv] logit_mu_h; // logit of the expected mean of hopt
-  vector<lower=0, upper=1>[n_riv] hopt;
+  vector<lower=0, upper=1>[n_riv] hopt; 
   
+  //vector[n_riv] logit_h;   // logit of hopt
   vector[n] LogR;
   
   
@@ -583,6 +516,7 @@ transformed parameters {
 //    mu_S[k] = exp(log_mu_S[k]);
     logit_mu_h[k] = delta * (lat[k]) + kappa ;
 //    logit_mu_h[k] = delta * (lat_rescaled[k]) + kappa ;
+   // logit_h[k] = logit_mu_h[k] + sigma_h * logit_h_raw[k];
   }
   
   a = 1/square(CV_S) ;
@@ -610,7 +544,7 @@ model {
   tau_h ~ gamma(.001, .001) ; // Diffuse prior for the precision
 
 
-
+  //logit_h_raw ~ std_normal();
   for (k in 1:n_riv) {
     logit_h[k] ~ normal(logit_mu_h[k], sigma_h);
     Sopt[k] ~ gamma(a, b[k]) ; // T[0,200] ;
@@ -640,23 +574,18 @@ generated quantities {
 "
 ```
 
-```{r}
-# data_lat <- list(
-#   lat = c(43.5, 48.5, 50.5, 53, 53.98515, 54.5, 55, 55, 55, 57, 57, 61, 64),
-#   lat_pred = c(46, 52, 59, 63), 
-#   n_pred = 4
-# )
-# 
-# data_hier <- c(SRSalmon, data_lat)
-```
 
 ```{r cache=TRUE}
 model_name_hier <-"HSR_Ricker_LogN_Management_S_gamma_hier"
 sm_hier <- stan_model(model_code =  hsr_model_hier_S_gamma_stan,
                  model_name =  model_name_hier)
-params<-c("Sopt","hopt","tau")
-# Inferences
+```
 
+
+```{r cache=TRUE}
+
+# Inferences
+set.seed(1234)
 
 fit_hier <- sampling(object = sm_hier,
                 data = SRSalmon, 
@@ -666,45 +595,54 @@ fit_hier <- sampling(object = sm_hier,
                 #   list(alpha = 0, beta = 0)),
                 iter = 5000, 
                 warmup = 2500, 
-                thin = n_thin,
-                control = list("adapt_delta"= .85)#list("max_treedepth" = 12)
+                thin = 1,
+                control = list("adapt_delta"= .9)#list("max_treedepth" = 12)
 )
-
-stan_rhat(fit_hier,pars = params )
-traceplot(fit_hier, "lp__", inc_warmup=FALSE)
-pairs(fit_hier, pars = c("Sopt[1]", "hopt[1]"))
-# plot(fit_hier, plotfun = "trace", pars = params, inc_warmup = TRUE)
-# 
-# plot(fit_hier, plotfun = "hist", pars = params, include = TRUE)+ 
-#   ggtitle("Posterior distributions for main parameters")
-# pairs(x = fit_hier, 
-#       pars = params
-# )
-# print(fit_hier)
-# plot(fit_hier)
-
-# plot(fit_hier, show_density = TRUE, ci_level = 0.5, fill_color = "purple")
-# plot(fit_hier, plotfun = "trace", pars = params, inc_warmup = TRUE)
-# plot(fit_hier, plotfun = "rhat") + ggtitle("Example of adding title to plot")
 ```
 
-### Results 
+
+Diagnostic of the convergence:
+
+
+```{r hier-diagnostic}
+params<-c("Sopt","hopt","tau", "delta", "kappa", "alpha", "beta", "CV_S")
+stan_rhat(fit_hier)
+monitor(rstan::extract(fit_hier, pars = params, permuted = FALSE, inc_warmup = TRUE))
+print(fit_hier, par = c("lp__", params) )
+```
+
+The few divergent transitions does not seem to have any particular shape.
 
 ```{r}
-names_ind <- c("Nivelle","Oir","Frome","Dee","Burrishoole","Lune","Bush",
-"Mourne","Faughan","Girnock Burn","North Esk","Laerdalselva","Ellidaar")
+pairs_list <- lapply(seq(SRSalmon$n_riv),
+       function(k)  pairs(fit_hier, 
+                          pars = c(paste0("Sopt[", k, "]"), 
+                                   paste0("hopt[", k, "]"))) )
+```
+
+
+# Results and analysis
+
+```{r}
+names_ind <- SRSalmon$name_riv#c("Nivelle","Oir","Frome","Dee","Burrishoole","Lune","Bush",
+#"Mourne","Faughan","Girnock Burn","North Esk","Laerdalselva","Ellidaar")
 
 names_pred <- c("Nivelle","new 45?","Oir","new 50?","Frome","Dee","Burrishoole","Lune","new 55?","Bush",
 "Mourne","Faughan","Girnock Burn","North Esk","new 60?","Laerdalselva","Ellidaar","new 65?")
+```
+
+```{r}
+dfw_hier <- extract_wider(fit_hier)
+dfl_hier <- extract_longer(fit_hier) %>% mutate(Model = "Hierarchical")
 ```
 
 
 Plotting Figure 9., Page 210
 
 ```{r}
-Sopt_hier <- fit_hier %>% extract_longer() %>% 
+Sopt_hier <- dfl_hier %>% 
   filter(str_detect(parameter, "Sopt\\.")) %>% 
-  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  mutate(Site = as_factor(str_sub(parameter, str_length("Sopt.")+1))) %>% 
   group_by(Site) %>% summarise(Sopt_med = median(value))%>% 
   select(Sopt_med) %>% as_vector()
 ```
@@ -713,27 +651,27 @@ Sopt_hier <- fit_hier %>% extract_longer() %>%
 ```{r}
 hopt_hier <- fit_hier %>% extract_longer() %>% 
   filter(str_detect(parameter, "hopt\\.")) %>% 
-  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  mutate(Site = as_factor(str_sub(parameter, str_length("hopt.")+1))) %>% 
   group_by(Site) %>% summarise(hopt_med = median(value))%>% 
   select(hopt_med) %>% as_vector()
 ```
 
 
 ```{r}
-Sopt_ind <- fit %>% extract_longer() %>% 
+Sopt_ind <- dfl_gamma %>% 
   filter(str_detect(parameter, "Sopt\\.")) %>% 
-  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
-  group_by(Site) %>% summarise(Sopt_med = median(value)) %>% 
+  mutate(Site = as_factor(str_sub(parameter, str_length("Sopt.")+1))) %>% 
+  group_by(Site) %>% summarise(Sopt_med = median(value))%>% 
   select(Sopt_med) %>% as_vector()
 ```
 
 
 ```{r}
-hopt_ind <- fit %>% extract_longer() %>% 
+hopt_ind <- dfl_gamma %>% 
   filter(str_detect(parameter, "hopt\\.")) %>% 
-  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
-  group_by(Site) %>% summarise(hopt_med = median(value)) %>% 
-  select(hopt_med) %>% as_vector()
+  mutate(Site = as_factor(str_sub(parameter, str_length("hopt.")+1))) %>% 
+  group_by(Site) %>% summarise(Sopt_med = median(value))%>% 
+  select(Sopt_med) %>% as_vector()
 ```
 
 
@@ -761,24 +699,6 @@ Rplot_hier <- lapply(seq_along(Sopt_hier),
     })%>% 
   bind_rows()
 
-
-
-# df_Rplot_ind <- Rplot_ind %>% as_tibble() %>% 
-#   mutate(S = Splot) %>% 
-#   pivot_longer(cols = -S, names_to = "river", values_to = "R") %>%
-#   mutate(river = as.numeric(str_sub(river, 2))) %>% 
-#   mutate(river = factor(names_ind[river], levels = names_ind ))
-# 
-# df_Rplot_hier <- Rplot_hier %>% as_tibble() %>% 
-#   mutate(S = Splot) %>% 
-#   pivot_longer(cols = -S, names_to = "river", values_to = "R") %>%
-#   mutate(river = as.numeric(str_sub(river, 2))) %>% 
-#   mutate(river = factor(names_ind[river], levels = names_ind )) 
-
-  
-
-# df_Rplot_hier %>% group_by(river) %>% 
-#   mutate(max_S = data$max_S)
 ```
 
 
@@ -791,75 +711,74 @@ tibble(R = SRSalmon$R, S = SRSalmon$S,
   facet_wrap(~ river, scales = "free") +
   geom_line(data = Rplot_hier, size = 1) + 
   geom_line(data = Rplot_ind, size = 1, linetype = "dashed") +
-  theme_classic(base_size = 15L) #+
-#  scale_x_continuous(limits = )
+  plot_theme + 
+  theme(axis.text.x =  element_text(angle = 0))
 ```
 
 
 ```{r}
-fit_hier_l <- extract_longer(fit_hier) %>% mutate(model = "hierarchical")
-fit_ind_l <- extract_longer(fit) %>%  mutate(model = "independent")
+dfl <- bind_rows(dfl_gamma %>%  mutate(Model = "Independent"), dfl_hier)
 
-fit_l <- bind_rows(fit_hier_l, fit_ind_l)
-
-fit_l %>% 
+dfl %>% 
   filter(str_detect(parameter, "Sopt\\.")) %>%
   rename("S*" = value) %>% 
-  mutate(Site = as_factor(str_sub(parameter, 6))) %>%  # 6 = length("Sopt.") + 1
+  mutate(Site = as_factor(str_sub(parameter, str_length("Sopt.") + 1))) %>%  
   ggplot() +
-  aes(x = Site, y = log(`S*`), fill = model ) +
+  aes(x = Site, y = log(`S*`), fill = Model ) +
   geom_boxplot(outlier.shape = NA, outlier.size = .25) +
   scale_x_discrete(labels = names_ind, guide = guide_axis(angle = 90)) +
   ylim(c(-3,6)) +
   scale_fill_manual(values = c("gray50", "gray90")) +
   ylab("log(S*)") +
-  theme_classic(base_size = 15L)
+  plot_theme
 ```
 
 
 ```{r}
-fit_l %>% 
+dfl %>% 
   filter(str_detect(parameter, "hopt\\.")) %>%
   rename("h*" = value) %>% 
-  mutate(Site = as_factor(str_sub(parameter, 6))) %>% 
+  mutate(Site = as_factor(str_sub(parameter, str_length("hopt.") + 1))) %>% 
   ggplot() +
-  aes(x = Site, fill = model, y = `h*`) +
+  aes(x = Site, fill = Model, y = `h*`) +
   geom_boxplot(outlier.shape = NA,outlier.size = .25) +
   scale_x_discrete(labels = names_ind, guide = guide_axis(angle = 90)) +
   scale_fill_manual(values = c("gray50", "gray90"))+
-  theme_classic(base_size = 15L)
+  plot_theme
 ```
 
 
 Plotting marginal posterior probability shapes of the parameters $\alpha$, $\beta$, $\delta$, $\kappa$, $\sigma$, $\tau_{h*}$ (Fig. 9.12 page 216)
 
 ```{r}
-fit_hier_l %>% 
+dfl_hier %>% 
   filter(parameter  %in% c("alpha", "beta", "delta", "kappa", "sigma", "sigma_h")) %>% 
+  mutate(parameter = replace(parameter, parameter == "sigma_h", "sigma[h]")) %>% 
   ggplot() + aes(x = value) +
   geom_density(adjust = 2) +
-  facet_wrap(~ parameter, ncol = 2, scales = "free") +
-  theme_classic(base_size = 15L) 
+  xlab("")+ ylab("")+
+  facet_wrap(~ parameter, ncol = 2, scales = "free", labeller = label_parsed) +
+  plot_theme
 ```
 
-Marginal posterior distributions and posterior predictive of $\log(S*)$ for the hierarhical model (fig. 9.13 page 217)
+Marginal posterior distributions and posterior predictive of $\log(S*)$ for the hierarchical model (fig. 9.13 page 217)
 
 ```{r}
-reg_param <- fit_hier %>% extract_wider() %>% select(alpha, beta) %>% 
+reg_param <- dfw_hier %>% select(alpha, beta) %>% 
   summarise(med_a = median(alpha), med_b = median(beta))
 
-fit_data <- fit_hier_l %>% 
+fit_data <- dfl_hier %>% 
   filter(str_detect(parameter, "Sopt\\.")) %>%
   rename("S*" = value) %>% 
-  mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = SRSalmon$lat[as.numeric(str_sub(parameter, 6))],
+  mutate(id = as.factor(str_sub(parameter, str_length("Sopt.") + 1)),
+    Latitude = SRSalmon$lat[as.numeric(str_sub(parameter, str_length("Sopt.") + 1))],
          type = "data") 
 
-fit_pred <- fit_hier_l %>% 
+fit_pred <- dfl_hier %>% 
   filter(str_detect(parameter, "Sopt_")) %>%
   rename("S*" = value) %>% 
-  mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = SRSalmon$lat_pred[as.numeric(str_sub(parameter, 11))],
+  mutate(id = as.factor(str_sub(parameter, str_length("Sopt_")+1)),
+    Latitude = SRSalmon$lat_pred[as.numeric(str_sub(parameter,str_length("Sopt_pred.") + 1))],
          type = "pred") 
 
 fit_data %>% bind_rows(fit_pred) %>% 
@@ -871,27 +790,28 @@ fit_data %>% bind_rows(fit_pred) %>%
   geom_abline(slope = reg_param$med_a, intercept = reg_param$med_b) + #-reg_param$med_a*mean(data_hier$lat)) +
   ylim(c(-2,5)) +
   ylab("log(S*)") +
-  theme_classic(base_size = 15L)
+  plot_theme
 ```
 
 Marginal posterior distributions and posterior predictive of $h*$ for the hierarchical model (fig. 9.14 page 218)
 
 ```{r}
-reg_param <- fit_hier %>% extract_wider() %>% select(delta, kappa) %>% 
+reg_param <- dfw_hier %>% 
+  select(delta, kappa) %>% 
   summarise(med_d = median(delta), med_k = median(kappa))
 
-fit_data <- fit_hier_l %>% 
+fit_data <- dfl_hier %>% 
   filter(str_detect(parameter, "^hopt\\.")) %>% # detect hopt. without logit_hopt.
   rename("h*" = value) %>% 
-  mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = SRSalmon$lat[as.numeric(str_sub(parameter, 6))],
+  mutate(id = as.factor(str_sub(parameter, str_length("hopt.") + 1)),
+    Latitude = SRSalmon$lat[as.numeric(str_sub(parameter, str_length("hopt.") + 1))],
          type = "data") 
 
-fit_pred <- fit_hier_l %>% 
+fit_pred <- dfl_hier %>% 
   filter(str_detect(parameter, "^hopt_")) %>%
   rename("h*" = value) %>% 
-  mutate(id = as.factor(str_sub(parameter, 6)),
-    Latitude = SRSalmon$lat_pred[as.numeric(str_sub(parameter, 11))],
+  mutate(id = as.factor(str_sub(parameter, str_length("hopt_") + 1)),
+    Latitude = SRSalmon$lat_pred[as.numeric(str_sub(parameter, str_length("hopt_pred.") + 1))],
          type = "pred") 
 
 fit_data %>% bind_rows(fit_pred) %>% 
@@ -903,11 +823,8 @@ fit_data %>% bind_rows(fit_pred) %>%
   annotate(x = seq(42, 65, .1), 
            y = 1/(1+exp(-reg_param$med_d*seq(42, 65, .1) -reg_param$med_k)),
            geom = "line") +
-  # geom_abline(slope = reg_param$med_d, 
-  #             intercept = reg_param$med_k) + # -reg_param$med_d*mean(data_hier$lat)) +
   ylim(c(0,1)) +
-#  ylab("log(S*)") +
-  theme_classic(base_size = 15L, base_rect_size = 1)
+  plot_theme
 ```
 
 

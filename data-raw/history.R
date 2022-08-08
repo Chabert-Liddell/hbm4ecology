@@ -49,10 +49,10 @@ pkgdown::build_home_index(); pkgdown::init_site();pkgdown::preview_site()
 #                      with Habitat and Time Covariates")
 
 #pkgdown::build_article("articles/namibian-hake-biomass-production")
-#pkgdown::build_article("articles/hierarchical-stock-recruitment")
+pkgdown::build_article("articles/hierarchical-stock-recruitment")
 #pkgdown::build_article("articles/hierarchical-exchangeable-cmr")
 #pkgdown::build_article("articles/hierarchical-succesive-removal-with-habitat-and-time-covariates")
-pkgdown::build_article("articles/hierarchical-successive-removal")
+#pkgdown::build_article("articles/hierarchical-successive-removal")
 pkgdown::preview_site()
 
 
