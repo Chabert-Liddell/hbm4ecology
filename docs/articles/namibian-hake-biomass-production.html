@@ -8,8 +8,8 @@
 <meta name="description" content="hbm4ecology">
 <title>Biomass Production Model: The Namibian Hake Fishery • hbm4ecology</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.1.0/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.1.0/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
+<link href="../deps/bootstrap-5.1.3/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.1.3/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- bootstrap-toc --><script src="https://cdn.rawgit.com/afeld/bootstrap-toc/v1.0.1/dist/bootstrap-toc.min.js"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Biomass Production Model: The Namibian Hake Fishery">
 <meta property="og:description" content="hbm4ecology">
@@ -42,9 +42,7 @@
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/hierarchical-exchangeable-cmr.html">Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment-analysis.html">Hierarchical Stock Recruitment Analysis</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment</a>
-    <a class="dropdown-item" href="../articles/hierarchical-succesive-removal-with-habitat-and-time-covariates.html">Hierarchical Model for Successive Removal Data with Habitat and Time Covariates</a>
+    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment Analysis</a>
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
     <a class="dropdown-item" href="../articles/state-space-modeling-of-a-salmon-life-cycle-model.html">State-space Modeling of A. Salmon Life Cycle Model</a>
@@ -88,11 +86,13 @@
 <span><span class="co">#&gt; To avoid recompilation of unchanged Stan programs, we recommend calling</span></span>
 <span><span class="co">#&gt; rstan_options(auto_write = TRUE)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Attaching packages</span> ─────────────────────────────────────── tidyverse 1.3.1 ──</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tibble </span> 3.1.7     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">dplyr  </span> 1.0.9</span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Attaching packages</span></span></span>
+<span><span class="co">#&gt; ───────────────────────────────────────</span></span>
+<span><span class="co">#&gt; tidyverse 1.3.2 ──</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tibble </span> 3.1.8     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">dplyr  </span> 1.0.9</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tidyr  </span> 1.2.0     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">stringr</span> 1.4.0</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">readr  </span> 2.1.2     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">forcats</span> 0.5.1</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">purrr  </span> 0.3.4</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">purrr  </span> 0.3.4     </span></span>
 <span><span class="co">#&gt; ── <span style="font-weight: bold;">Conflicts</span> ────────────────────────────────────────── tidyverse_conflicts() ──</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">tidyr</span>::<span style="color: #00BB00;">extract()</span> masks <span style="color: #0000BB;">rstan</span>::extract()</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">dplyr</span>::<span style="color: #00BB00;">filter()</span>  masks <span style="color: #0000BB;">stats</span>::filter()</span></span>
@@ -105,9 +105,11 @@
 <span><span class="co">#&gt; This is posterior version 1.2.2</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'posterior'</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:rstan':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     ess_bulk, ess_tail</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     mad, sd, var</span></span>
@@ -119,12 +121,13 @@
 <span><span class="co">#&gt;    * See ?bayesplot_theme_set for details on theme setting</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'bayesplot'</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; The following object is masked from 'package:posterior':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     rhat</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="the-namibian-hake-fishery">The Namibian hake fishery<a class="anchor" aria-label="anchor" href="#the-namibian-hake-fishery"></a>
-</h3>
+<div class="section level2">
+<h2 id="the-namibian-hake-fishery">The Namibian hake fishery<a class="anchor" aria-label="anchor" href="#the-namibian-hake-fishery"></a>
+</h2>
 <p>Let us consider as a first example the data from the Namibian hake
 fishery. Two hake species (<em>Merlucius capensis</em> and <em>Merlucius
 paradoxus</em>) are targeted by this fishery. The data analyzed here
@@ -166,12 +169,12 @@ restrictive fishing quotas are imposed in the future?</p></li>
 of alternative management scenarios when efforts are being made to
 control the level of catches and promote sustainable harvest.</p>
 </div>
+<div class="section level2">
+<h2 id="state-space-modeling-of-a-biomass-production-model">State-space modeling of a biomass production model<a class="anchor" aria-label="anchor" href="#state-space-modeling-of-a-biomass-production-model"></a>
+</h2>
 <div class="section level3">
-<h3 id="state-space-modeling-of-a-biomass-production-model">State-space modeling of a biomass production model<a class="anchor" aria-label="anchor" href="#state-space-modeling-of-a-biomass-production-model"></a>
+<h3 id="process-equation-for-the-underlying-dynamics-of-the-biomass">Process equation for the underlying dynamics of the biomass<a class="anchor" aria-label="anchor" href="#process-equation-for-the-underlying-dynamics-of-the-biomass"></a>
 </h3>
-<div class="section level5">
-<h5 id="process-equation-for-the-underlying-dynamics-of-the-biomass">Process equation for the underlying dynamics of the biomass<a class="anchor" aria-label="anchor" href="#process-equation-for-the-underlying-dynamics-of-the-biomass"></a>
-</h5>
 <ul>
 <li><span class="math inline">\(\frac{\mbox{d}B_t}{\mbox{d}t} =
 h(B_t)\)</span></li>
@@ -203,9 +206,9 @@ e^{\epsilon_1}\)</span>
 </li>
 </ul>
 </div>
-<div class="section level5">
-<h5 id="observation-equation-to-link-the-data-to-the-hidden-process">Observation equation to link the data to the hidden process<a class="anchor" aria-label="anchor" href="#observation-equation-to-link-the-data-to-the-hidden-process"></a>
-</h5>
+<div class="section level3">
+<h3 id="observation-equation-to-link-the-data-to-the-hidden-process">Observation equation to link the data to the hidden process<a class="anchor" aria-label="anchor" href="#observation-equation-to-link-the-data-to-the-hidden-process"></a>
+</h3>
 <ul>
 <li>
 <span class="math inline">\(i_t = q \times B_t \times
@@ -223,9 +226,9 @@ Uniform(-20,20)\)</span>
 </li>
 </ul>
 </div>
-<div class="section level5">
-<h5 id="in-state-space-modeling-notation">In state-space modeling notation:<a class="anchor" aria-label="anchor" href="#in-state-space-modeling-notation"></a>
-</h5>
+<div class="section level3">
+<h3 id="in-state-space-modeling-notation">In state-space modeling notation:<a class="anchor" aria-label="anchor" href="#in-state-space-modeling-notation"></a>
+</h3>
 <p><span class="math display">\[
 \begin{cases}
 [Z_{t+1} | Z_t, \theta_1] \\
@@ -247,9 +250,13 @@ biomass production model</p>
 </div>
 </center>
 </div>
-<div class="section level4">
-<h4 id="writing-the-model-in-stan">Writing the model in Stan<a class="anchor" aria-label="anchor" href="#writing-the-model-in-stan"></a>
-</h4>
+</div>
+<div class="section level2">
+<h2 id="sampling-results-and-analysis">Sampling, results and analysis<a class="anchor" aria-label="anchor" href="#sampling-results-and-analysis"></a>
+</h2>
+<div class="section level3">
+<h3 id="writing-the-model-in-stan">Writing the model in Stan<a class="anchor" aria-label="anchor" href="#writing-the-model-in-stan"></a>
+</h3>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">stan_model_biomprod</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
 <span><span class="st">data {</span></span>
@@ -464,7 +471,6 @@ biomass production model</p>
 <span><span class="co">#&gt; Warning in par(usr): argument 1 does not name a graphical parameter</span></span></code></pre></div>
 <p><img src="namibian-hake-biomass-production_files/figure-html/unnamed-chunk-2-1.png" width="700" style="display: block; margin: auto;"></p>
 </div>
-</div>
 <div class="section level3">
 <h3 id="analysis">Analysis<a class="anchor" aria-label="anchor" href="#analysis"></a>
 </h3>
@@ -626,9 +632,9 @@ Recall that Schaefer type production function is given by: <span class="math dis
 C_{MSY} = \frac{r \times K}{4} \\
 B_{MSY} = \frac{K}{2}
 \end{cases}\]</span>
-The value of the Fox model are as follows: <span class="math display">\[
-$h(B_t) = r \times B_t \times (1-\frac{\log(B_t)}{\log(K)}) \]</span>,
-with its associated fisheries management points:
+The production function of the Fox model is the following: <span class="math display">\[ $h(B_t) = r \times B_t \times
+(1-\frac{\log(B_t)}{\log(K)}) \]</span>, with its associated fisheries
+management points:
 <span class="math display">\[\begin{cases}
 C_{MSY} = \frac{r \times K \times e^{-1}}{\log(K)} \\
 B_{MSY} = K \times e^{-1}
@@ -920,6 +926,7 @@ model:</p>
 </table>
 </div>
 </div>
+</div>
 <div class="section level2">
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
@@ -965,7 +972,7 @@ Oxford University Press.
 
 <div class="pkgdown-footer-right">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.5.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
     </footer>

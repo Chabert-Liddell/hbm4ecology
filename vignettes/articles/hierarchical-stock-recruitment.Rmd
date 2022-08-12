@@ -254,7 +254,7 @@ dfl_unif <- extract_longer(fit)
 
 dfl_unif %>% 
   filter(str_detect(parameter, "Sopt")) %>% 
-  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>% 
+  mutate(Site = SRSalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>% 
   ggplot(aes(y = log(value), x = Site)) +
   geom_boxplot(fill = "grey80") +
   ylab("log(S*)") +
@@ -265,7 +265,7 @@ dfl_unif %>%
 ```{r}
 dfl_unif %>% 
   filter(str_detect(parameter, "hopt")) %>% 
-  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("hopt.") + 1))]) %>% 
+  mutate(Site = SRSalmon$name_riv[as.integer(str_sub(parameter, str_length("hopt.") + 1))]) %>% 
   ggplot(aes(y = log(value), x = Site)) +
   geom_boxplot(fill = "grey80") +
   ylab("log(h*)") +
@@ -374,7 +374,7 @@ dfl_gamma <- extract_longer(fit)
 
 dfl_gamma %>% 
   filter(str_detect(parameter, "Sopt")) %>% 
-  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>% 
+  mutate(Site = SRSalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>% 
   ggplot(aes(y = log(value), x = Site)) +
   geom_boxplot(fill = "grey80") +
   ylab("log(S*)") +
@@ -385,7 +385,7 @@ dfl_gamma %>%
 ```{r}
 dfl_gamma %>% 
   filter(str_detect(parameter, "hopt")) %>% 
-  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("hopt.") + 1))]) %>% 
+  mutate(Site = SRSalmon$name_riv[as.integer(str_sub(parameter, str_length("hopt.") + 1))]) %>% 
   ggplot(aes(y = log(value), x = Site)) +
   geom_boxplot(fill = "grey80") +
   ylab("log(h*)") +
@@ -399,7 +399,7 @@ The choice of the prior distribution of $S^*$ does not make much difference on t
 ```{r}
 bind_rows(dfl_unif %>% mutate (Model =  "Uniform"), dfl_gamma %>%  mutate(Model = "Gamma")) %>% 
   filter(str_detect(parameter, "Sopt")) %>% 
-  mutate(Site = HSrAsalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>%
+  mutate(Site = SRSalmon$name_riv[as.integer(str_sub(parameter, str_length("Sopt.") + 1))]) %>%
   ggplot(aes(x = log(value), linetype = Model, color = Model)) +
   geom_density() +
   facet_wrap(~ Site) + 
