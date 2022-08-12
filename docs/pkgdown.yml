@@ -1,12 +1,11 @@
 pandoc: '2.18'
-pkgdown: 2.0.5
+pkgdown: 2.0.6
 pkgdown_sha: ~
 articles:
   hierarchical-exchangeable-cmr: hierarchical-exchangeable-cmr.html
   hierarchical-stock-recruitment: hierarchical-stock-recruitment.html
-  hierarchical-succesive-removal-with-habitat-and-time-covariates: hierarchical-succesive-removal-with-habitat-and-time-covariates.html
   hierarchical-successive-removal: hierarchical-successive-removal.html
   namibian-hake-biomass-production: namibian-hake-biomass-production.html
   state-space-modeling-of-a-salmon-life-cycle-model: state-space-modeling-of-a-salmon-life-cycle-model.html
-last_built: 2022-08-03T12:54Z
+last_built: 2022-08-12T11:40Z
 

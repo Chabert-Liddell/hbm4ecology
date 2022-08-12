@@ -8,8 +8,30 @@ template:
 navbar:
   bg: primary
   structure:
-    left:  [reference, articles]
-    right: [search, github]
+    left:
+    - intro
+    - reference
+    - articles
+    - tutorials
+    - news
+    right: github
+  components:
+    reference:
+      text: Reference
+      href: reference/index.html
+    articles:
+      text: Articles
+      menu:
+      - text: Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data
+        href: articles/hierarchical-exchangeable-cmr.html
+      - text: Hierarchical Stock Recruitment Analysis
+        href: articles/hierarchical-stock-recruitment.html
+      - text: Hierarchical Successive Removal
+        href: articles/hierarchical-successive-removal.html
+      - text: 'Biomass Production Model: The Namibian Hake Fishery'
+        href: articles/namibian-hake-biomass-production.html
+      - text: State-space Modeling of A. Salmon Life Cycle Model
+        href: articles/state-space-modeling-of-a-salmon-life-cycle-model.html
 reference:
 - title: "Data"
   desc: "Data available from the different example"

@@ -24,8 +24,8 @@ usethis::use_github_action("pkgdown")
 devtools::build_readme()
 pkgdown::build_home()
 pkgdown::build_home_index(); pkgdown::init_site();pkgdown::preview_site()
-
-
+pkgdown::build_articles_index()
+pkgdown::build_favicons()
 
 #
 
