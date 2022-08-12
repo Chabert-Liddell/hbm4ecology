@@ -1,6 +1,10 @@
 ## code to prepare `DATASET` dataset goes here
 
-## Chapter 9
+
+#===============================================================================
+# Chap 9.2 Catch Mark Recapture, Oir river
+#===============================================================================
+
 CmrOir <- list(
   N = 17, #Number of Years
   y1 = c(167, 264, 130, 16, 226, 235, 15, 44, 31, 100, 32, 109, 70, 56, 34, 154, 53),
@@ -15,6 +19,9 @@ CmrOir <- list(
 
 usethis::use_data(CmrOir, overwrite = TRUE)
 
+#===============================================================================
+# Chap 9.3 Stock Recruitment
+#===============================================================================
 
 SRSalmon <- list(
 
@@ -86,9 +93,9 @@ SRSalmon <- list(
 
 usethis::use_data(SRSalmon, overwrite = TRUE)
 
-#===============================================================
-# Chapter 10
-#===============================================================
+#===============================================================================
+# Chap 10.2 Successive removal Oir
+#===============================================================================
 
 # DATA
 
@@ -309,6 +316,10 @@ SucRemOir <- list(
 
 usethis::use_data(SucRemOir, overwrite = TRUE)
 
+#===============================================================================
+# Chap 10.3 Successive removal Nivelle
+#===============================================================================
+
 
 SucRemNivelle <-
   list(
@@ -354,6 +365,10 @@ SucRemNivelle <-
 
 usethis::use_data(SucRemNivelle, overwrite = TRUE)
 
+#===============================================================================
+# Chap 11.2 Biomass Production
+#===============================================================================
+
 nh <- read.table("data-raw/dt_namibian_hake.txt", header = TRUE)
 BioprodNamibianHake <- list(N = nrow(nh),
                 # NF = 5,
@@ -363,3 +378,77 @@ BioprodNamibianHake <- list(N = nrow(nh),
 
 
 usethis::use_data(BioprodNamibianHake, overwrite = TRUE)
+
+
+#===============================================================================
+# Chap 11.3 Salmon life cycle
+#===============================================================================
+
+SalmonLifeCycle <- # DATA
+  # Missing data are denoted NA
+
+  list(
+
+    n = 18,
+
+    # Wetted surface of the system
+    surf = 25229,
+
+    # Fecundity (number of eggs / female)
+    fec1 = 4635,
+    fec2 = 7965,
+
+    Year = seq(1984, 2001),
+    # ADULTS
+
+    # Numbers
+
+    # captured at the trap
+    c_Sp = c(167, 264, 130, 16, 226, 235, 15, 44, 31, 100, 32, 109, 70, 56, 34, 154, 53, 160),
+    # Retrieved from the population
+    x_Sp1=c(10, 37, 28, 3, 35, 31, 4, 0, 10, 17, 12, 6, 13, 19, 3, 5, 0, 1),
+    x_Sp2=c(3, 11, 9, 1, 8, 5, 4, 0, 1, 2, 2, 1, 2, 3, 1, 1, 0, 0),
+    # marked and released
+    mad = c(154, 216, 93, 12, 183, 199, 7, 44, 20, 81, 18, 102, 55, 34, 30, 148, 53, 159),
+    # recaptured marked
+    rmad = c(12, 21, 5, 2, 12, 56, 2, 23, 4, 4, 1, 39, 25, 12, 6, 13, 4, 31),
+    # recaptured unmarked
+    r_unm = c(10,  4,  4, 22,  0,  0, 15,  1,  5,  3,  4,  7, 57,  3, 30, 22, 33,  4),
+
+    # Demographic structure
+
+    # adults examined for ageing (could be smaller than c_Sp)
+    sample_Sp_age = c(159, 211, 111, 16, 197, 220, 9, 41, 28, 98, 29, 108, 60, 52, 28, 140, 51, 140),
+    # 1SW issued from Sm1 among "sample_Sp_age"
+    sample_Sp11 = c(113, 116, 61, 13, 85, 129, 3, 38, 22, 85, 24, 88, 48, 47, 22, 105, 45, 120),
+    # 1SW issued from Sm2 among "sample_Sp_age"
+    sample_Sp21 = c(20, 50, 19, 2, 74, 54, 2, 1, 4, 6, 3, 17, 9, 4, 5, 18, 2, 14),
+    # 2SW issued from Sm1 among "sample_Sp_age"
+    sample_Sp12 = c(23, 43, 24, 1, 36, 31, 3, 1, 2, 7, 2, 3, 2, 1, 1, 12, 2, 5),
+    # 2SW issued from Sm2 among "sample_Sp_age"
+    sample_Sp22 = c(3, 2, 7, 0, 2, 6, 1, 1, 0, 0, 0, 0, 1, 0, 0, 5, 2, 1),
+
+    # Sex ratio
+
+    # 1SW and 2 SW examined for sex
+    sample_Sp1_sex = c(141, 203, 93, 15, 182, 197, 9, 42, 28, 93, 30, 106, 67, 55, 33, 136, 49, 151),
+    sample_Sp2_sex = c(26, 61, 37, 1, 44, 38, 6, 2, 3, 7, 2, 3, 3, 1, 1, 18, 4, 9),
+    # female among sex1 and sex2
+    sample_Sp1f = c(40, 69, 31, 1, 63, 64, 3, 13, 11, 22, 18, 45, 27, 21, 10, 43, 26, 51),
+    sample_Sp2f = c(21, 42, 26, 1, 31, 21, 4, 1, 2, 3, 2, 3, 3, 1, 1, 13, 2, 3),
+
+    # SMOLTS
+
+    # Catches
+    c_Sm = c(NA, 439, 887, 283, 307, 553, 746, 151, 580, 209, 329, 618, 767, 205, 511, 195, 1849, 688),
+    # Smolts examined for river-ageing
+    sample_Sm_age = c(1, 439, 887, 283, 307, 553, 746, 151, 580, 209, 329, 618, 767, 205, 511, 195,  1849, 688),
+    sample_Sm1 = c(NA, 232, 848, 146, 282, 495, 708, 101, 571, 171, 323, 541, 684, 186, 438, 43, 1835, 636),
+
+    # Marked-released and recaptured
+    m_Sm = c(86.000, 86.000, 135, 31, 59, 65, 38, 35, 50, 26, 17, 63, 76, 63, 91, 59, 300, 264),
+    r_Sm = c(NA, NA, 91, 24, 43, 43, 35, 27, 43, 24, 10, 53, 58, 31, 44, 45, 232, 123)
+
+  )
+
+usethis::use_data(SalmonLifeCycle, overwrite = TRUE)

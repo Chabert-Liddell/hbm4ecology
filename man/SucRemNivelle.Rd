@@ -27,7 +27,8 @@ Brun, M., Abraham, C., Jarry, M., Dumas, J., Lange, F., & Prévost, E.
 SucRemNivelle
 }
 \description{
-A dataset containing the successive removal data electofishing of salmon
+A dataset containing the successive removal data electofishing of
+salmon
 juveniles over 3 passes on 3 years (2003--2005) and 11 sites. Contains
 missing data.
 }

@@ -1,6 +1,7 @@
-#' Biomass Production for Namibian Hake over 25 years
+#' @title Biomass Production for Namibian Hake over 25 years
 #'
-#' A dataset containing the biomass and abundance indices from 1964 to 1988
+#' @description A dataset containing the biomass and abundance indices from
+#' 1964 to 1988.
 #'
 #' @format A named list:
 #' \describe{
@@ -14,9 +15,9 @@
 "BioprodNamibianHake"
 
 
-#' Catch-mark-recapture data of adult salmon on the Oir river
+#' @title Catch-mark-recapture data of adult salmon on the Oir river
 #'
-#' A dataset containing CMR data from 1984 to 2000
+#' @description A dataset containing CMR data from 1984 to 2000
 #'
 #' @format A named list:
 #' \describe{
@@ -32,9 +33,9 @@
 
 "CmrOir"
 
-#' Stock recruitment data of A. salmon over 13 rivers
+#' @title Stock recruitment data of A. salmon over 13 rivers
 #'
-#' A dataset containing the stock and recruitment of A. salmon over 13 european
+#' @description A dataset containing the stock and recruitment of A. salmon over 13 european
 #' rivers. As well as the latitude and name of the different site and new
 #' latitude to perform predictions.
 #'
@@ -63,9 +64,10 @@
 "SRSalmon"
 
 
-#' Three passes successive removal data of A. salmon in the Nivelle river
+#' @title Three passes successive removal data of A. salmon in the Nivelle river
 #'
-#' A dataset containing the successive removal data electofishing of salmon
+#' @description A dataset containing the successive removal data electofishing of
+#' salmon
 #' juveniles over 3 passes on 3 years (2003--2005) and 11 sites. Contains
 #' missing data.
 #'
@@ -87,9 +89,9 @@
 
 "SucRemNivelle"
 
-#' Successive removal data of A. salmon in the Oir river
+#' @title Successive removal data of A. salmon in the Oir river
 #'
-#' A dataset containing successive removal data with two passes of
+#' @description A dataset containing successive removal data with two passes of
 #' Atlantic salmon over 20 years and between 7 and 10 sampling sites per year.
 #' The data also contains the surface area of the sampling sites.
 #'
@@ -117,3 +119,58 @@
 #' Canadian Journal of Fisheries and Aquatic Sciences, 65(1), 117-133.
 
 "SucRemOir"
+
+#' @title Life cycle data of Atlantic salmon
+#'
+#' @description A dataset resulting from a comprehensive survey of the salmon
+#' population of the Oir river between 1984 and 2001. The dataset corresponds
+#' essentially to Catch Mark Recapture experiments.
+#'
+#' @format A named list:
+#' \describe{
+#'   \item{n}{The number of years}
+#'   \item{surf}{The wetted surface of the system}
+#'   \item{fec1}{Fecunity (number of eggs / female) of 1 Sea Winter (1SW) fish}
+#'   \item{fec2}{Fecunity (number of eggs / female) of 2 Sea Winter (2SW) fish}
+#'   \item{Year}{The years of the data}
+#'   \item{c_Sp}{Number of of spawners trapped during upstream migration
+#'   (\eqn{y_1^{Sp}})}
+#'   \item{x_Sp1}{Number of 1SW Spawners retrieved fron the
+#'   population (\eqn{y_2^{Sp}})}
+#'   \item{x_Sp2}{Number of 2SW Spawners retrieved fron the
+#'   population (\eqn{y_3^{Sp}})}
+#'   \item{mad}{Marked and released Spawners (\eqn{y_4^{Sp}})}
+#'   \item{rmad}{Marked and recaptured Spawners (\eqn{y_5^{Sp}})}
+#'   \item{r_unm}{Unmarked and recaptured Spawners (\eqn{y_6^{Sp}})}
+#'   \item{sample_Sp_age}{Adults examined for ageing (\eqn{y_7^{Sp}})}
+#'   \item{sample_Sp11}{Number of 1SW issued from 1+ Smolts among sample_Sp_age
+#'   (\eqn{y_8^{Sp}})}
+#'   \item{sample_Sp21}{Number of 1SW issued from 2+ Smolts among sample_Sp_age
+#'   (\eqn{y_9^{Sp}})}
+#'   \item{sample_Sp12}{Number of 2SW issued from 1+ Smolts among sample_Sp_age
+#'   (\eqn{y_{10}^{Sp}})}
+#'   \item{sample_Sp22}{Number of 2SW issued from 2+ Smolts among sample_Sp_age
+#'   (\eqn{y_{11}^{Sp}})}
+#'   \item{sample_Sp1_sex}{Number of 1SW fish examined for sex identification
+#'   (\eqn{y_{12}^{Sp}})}
+#'   \item{sample_Sp2_sex}{Number of 2SW fish examined for sex identification
+#'   (\eqn{y_{13}^{Sp}})}
+#'   \item{sample_Sp1f}{Number of 1SW fish identified as female among
+#'   sample_Sp1_sex (\eqn{y_{14}^{Sp}})}
+#'   \item{sample_Sp2f}{Number of 1SW fish identified as female among
+#'   sample_Sp2_sex (\eqn{y_{15}^{Sp}})}
+#'   \item{c_Sm}{Number of smolts  caught in the downstream trapping facility
+#'  during the migration time(\eqn{y_{1}^{Sm}})}
+#'   \item{m_Sm}{Number of smolts  marked and released (\eqn{y_{2}^{Sm}})}
+#'   \item{m_Sm}{Number of smolts  marked-released and recaptured (\eqn{y_{3}^{Sm}})}
+#'   \item{sample_Sm_age}{Number of smolts  examined for river-age (\eqn{y_{4}^{Sm}})}
+#'   \item{sample_Sm1}{Number of 1+ smolts  among sample_Sm_age (\eqn{y_{5}^{Sm}})}
+#' }
+#' @source Rivot, E., Prévost, E., Cuzol, A., Parent, E. & Baglinière, J. L.
+#' (2004). A Bayesian state-space modeling framework for fitting a salmon
+#' stage-structured population dynamic model to multiple time series of
+#' field data. Ecological Modelling, 179, 463-485.
+
+"SalmonLifeCycle"
+
+

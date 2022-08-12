@@ -42,8 +42,7 @@
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/hierarchical-exchangeable-cmr.html">Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment-analysis.html">Hierarchical Stock Recruitment Analysis</a>
-    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment</a>
+    <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment Analysis</a>
     <a class="dropdown-item" href="../articles/hierarchical-succesive-removal-with-habitat-and-time-covariates.html">Hierarchical Model for Successive Removal Data with Habitat and Time Covariates</a>
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
@@ -77,8 +76,1600 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span></code></pre></div>
-  </main>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mcmc-jags.sourceforge.io" class="external-link">rjags</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/posterior/" class="external-link">posterior</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/bayesplot/" class="external-link">bayesplot</a></span><span class="op">)</span></span>
+<span><span class="va">plot_theme</span> <span class="op">&lt;-</span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>axis.text.x <span class="op">=</span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span>,</span>
+<span>        strip.background <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_rect</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="st">"#4da598"</span><span class="op">)</span>,</span>
+<span>        strip.text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="motivation-and-context">Motivation and context<a class="anchor" aria-label="anchor" href="#motivation-and-context"></a>
+</h2>
+<p>We illustrate the flexibility of the Bayesian state-space modeling
+approach for stage-structured population dynamics models fitted to
+series of sequential observations of different nature. The example is
+inspired from <span class="citation">Rivot et al. (<a href="#ref-RivotPrevostParent04" role="doc-biblioref">2004</a>)</span>.</p>
+<p>The method is applied to a fully stage-structured model for the
+Atlantic salmon life cycle with multiple life histories. The model
+describes the dynamics of the numbers of individuals at various life
+stages, with a discrete annual time step. It includes nonlinear
+regulation and has a probabilistic structure accommodating for both
+environmental and demographic stochasticity. The model is fitted to a
+dataset resulting from the comprehensive survey of the salmon population
+of the Oir River (Lower Normandy, France) between 1984 and 2001.
+Observation models are constructed to relate the field data to the
+hidden states at the various life stages. The observation process
+corresponds essentially to capture-mark-recapture (CMR) experiments for
+the evaluation of migrating juvenile and spawner runs and random
+sampling for demographic features.</p>
+<p>We take into consideration a detailed description of A. salmon life
+histories: fish from the two smolt age classes (1+ Smolts and 2+ Smolts)
+can either spend one or two winters at sea (1SW and 2SW in the
+following) before returning as spawners. One and two sea winter spawners
+resulting from 1+ Smolts are denoted <span class="math inline">\(Sp11\)</span> and <span class="math inline">\(Sp12\)</span>, respectively, and those issued from
+2+ Smolts are denoted <span class="math inline">\(Sp21\)</span> and
+<span class="math inline">\(Sp22\)</span>, respectively. Both <span class="math inline">\(Sp11\)</span> and <span class="math inline">\(Sp21\)</span> are 1SW fish but with different
+smolt-ages, and <span class="math inline">\(Sp12\)</span> and <span class="math inline">\(Sp22\)</span> are 2SW fish with different
+smolt-ages.</p>
+<center>
+<div class="figure">
+<img src="figures/SalmonLifeCycle/SalmonLifeCycle.png" style="width:80.0%;height:80.0%" alt=""><p class="caption">Figure 1 – Atlantic salmon life cycle model including
+the four main life histories encountered in French populations. Eggs
+spawned at year t give rise to spawners Sp11 returning year t+3. Sp12
+and Sp21 returning year t+4 and Sp22 returning year t+5.</p>
+</div>
+</center>
+</div>
+<div class="section level2">
+<h2 id="modeling">Modeling<a class="anchor" aria-label="anchor" href="#modeling"></a>
+</h2>
+<p>Here we adopt a slightly simplified model than the one described in
+the corresponding chapter of the book (Chap. 11.3, <span class="citation">Parent and Prévost (<a href="#ref-hbm4eco" role="doc-biblioref">2013</a>)</span>).</p>
+<div class="section level3">
+<h3 id="process-equations-describing-the-hidden-population-dynamics">Process equations describing the hidden population dynamics<a class="anchor" aria-label="anchor" href="#process-equations-describing-the-hidden-population-dynamics"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>Spawner –&gt; Eggs
+<ul>
+<li>The number of eggs laid by female in year <span class="math inline">\(t\)</span> is a deterministic function of the
+number of spawners, the proportion of females and the fecondity rate:
+<span class="math display">\[ W_t = (Sp11_t + Sp21t - y^{Sp}_{2,t})
+\times pf_{1,t} \times fec_1 + (Sp12_t + Sp22t - y^{Sp}_{3,t}) \times
+pf_{2,t} \times fec_2\]</span> with the following distributions:</li>
+</ul>
+</li>
+</ol>
+<ul>
+<li>
+<span class="math inline">\(y^2_{Sp}\)</span> and <span class="math inline">\(y^3_{Sp}\)</span> are known number of fish
+removed.</li>
+<li>
+<span class="math inline">\(Sp21_{t=1} \sim Uniform(1, 50)\)</span>
+spawners issued from 1+ smolts</li>
+<li>
+<span class="math inline">\(Sp12_{t=1} \sim Uniform(1, 50)\)</span>
+spawners issued from 2+ smolts</li>
+<li>
+<span class="math inline">\(fec_1\)</span> and <span class="math inline">\(fec_2\)</span> are the mean fecondity of female
+which is known and constant over time</li>
+<li>
+<span class="math inline">\(pf_{1,t}\)</span> and <span class="math inline">\(pf_{2,t}\)</span> are the proportion of female
+among 1SW and 2SW fish.</li>
+</ul>
+<ol start="2" style="list-style-type: decimal">
+<li>Eggs –&gt; 0+ juveniles</li>
+</ol>
+<p>We model this with a density dependent Ricker relationship, with
+lognormal error to represent the environmental variability: <span class="math display">\[ 0+_{t+1}^* \sim Normal(\log(W_t^* \times \alpha
+\times e^{-\beta\times W_{t}^*}), \sigma^2) \]</span> <span class="math inline">\(0+_{t}^* = 0+_t/h\)</span> and <span class="math inline">\(W_{t}^* = W_t/h\)</span> are standardized by the
+surface area of habitat available for juveniles production <span class="math inline">\(h = 25229m^2\)</span>. And we give the following
+prior distributions:</p>
+<ul>
+<li><span class="math inline">\(\log(\alpha) \sim
+Uniform(-10,10)\)</span></li>
+<li><span class="math inline">\(\beta \sim Normal (0,100)\)</span></li>
+<li><span class="math inline">\(\log (\sigma^2) \sim
+Uniform(-20,20)\)</span></li>
+</ul>
+<ol start="3" style="list-style-type: decimal">
+<li>0+ juveniles –&gt; Smolts</li>
+</ol>
+<p>The juveniles <span class="math inline">\(0+_{t+1}\)</span> will
+survive to next spring as pre-smolts <span class="math inline">\(PSm_{t+2}\)</span> with probability <span class="math inline">\(\gamma_{0+}\)</span>. Here, we use an
+approximation of <span class="math inline">\(PSm_{t+2} \sim
+Binomial(0+_{t+1}, \gamma_{0+}\)</span> by saying that a fixed rate
+<span class="math inline">\(\gamma_{0+}\)</span> of juveniles will
+survive. We will make a similar approximation for all the survival and
+migration steps.</p>
+<ul>
+<li><span class="math inline">\(PSm_{t+2} = \gamma_{0+}\times
+0+_{t+1}\)</span></li>
+<li><span class="math inline">\(\gamma_{0+} \sim Beta(15,
+15)\)</span></li>
+</ul>
+<p>Among pre-smolts a proportion <span class="math inline">\(\theta_{Sm1, t+2}\)</span> will migrate as <span class="math inline">\(1+\)</span> Smolts while the remaining will stay
+an additional year as <span class="math inline">\(1+\)</span> Parrs,
+which will survive and migrate next year with probability <span class="math inline">\(\gamma_{parr1}\)</span>. Again we use a
+deterministic approximation for the binomial:</p>
+<ul>
+<li><span class="math inline">\(Sm1_{t+2} = PSm_{t+2} \times
+\theta_{Sm1, t+2}\)</span></li>
+<li><span class="math inline">\(Parr1_{t+2} = PSm_{t+2} -
+Sm1_{t+2}\)</span></li>
+<li><span class="math inline">\(Sm2_{t+3} = Parr1_{t+2} \times
+\gamma_{parr1}\)</span></li>
+</ul>
+<ol start="4" style="list-style-type: decimal">
+<li>Smolts –&gt; Returning spawners</li>
+</ol>
+<p>A proportion <span class="math inline">\(\gamma_{Sm1, t+2}\)</span>
+of 1+ Smolts will survive the first winter at sea and will become
+post-smolts. Then among these post-smolts, a proportion <span class="math inline">\(\theta_{m1}\)</span> will mature as sea-winter
+fish <span class="math inline">\(Sp11\)</span> the next summer, while
+the rest will not mature this year (<span class="math inline">\(Res1\)</span>).</p>
+<ul>
+<li><span class="math inline">\(PostSm1_{t+3} = Sm1_{t+2} \times
+\gamma_{Sm1, t+2}\)</span></li>
+<li><span class="math inline">\(Sp11_{t+3} = PostSm1_{t+3} \times
+\theta_{m1}\)</span></li>
+<li><span class="math inline">\(Res1_{t+3} = PostSm1_{t+3} -
+Sp11_{t+3}\)</span></li>
+</ul>
+<p>Also for year <span class="math inline">\(t +4\)</span>:</p>
+<ul>
+<li><span class="math inline">\(Sp12_{t+4} = Res1_{t+3} \times
+\gamma_{res}\)</span></li>
+<li><span class="math inline">\(PostSm2_{t+4} = Sm2_{t+2} \times
+\gamma_{Sm2, t+3}\)</span></li>
+<li><span class="math inline">\(Sp21_{t+4} = PostSm2_{t+4} \times
+\theta_{m1}\)</span></li>
+<li><span class="math inline">\(Res2_{t+4} = PostSm2_{t+4} -
+Sp21_{t+4}\)</span></li>
+</ul>
+<p>and year <span class="math inline">\(t + 5\)</span>:</p>
+<ul>
+<li><span class="math inline">\(SP22_{t+5} = Res2_{t+4} \times
+\gamma_{res}\)</span></li>
+</ul>
+<p>Finally the number of spawners in year <span class="math inline">\(t\)</span> is obtained by the mass balance
+equation: <span class="math display">\[Sp_t = Sp11_t + Sp12_t + Sp21_t +
+Sp22_t\]</span></p>
+<div class="section level4">
+<h4 id="initial-state-variable">Initial state variable<a class="anchor" aria-label="anchor" href="#initial-state-variable"></a>
+</h4>
+<p>We give the following prior distribution at <span class="math inline">\(t=1\)</span> for the fish population at different
+stages of the life cycle:</p>
+<ul>
+<li><span class="math inline">\(0+_{t=1}^* \sim
+Uniform(0,1)\)</span></li>
+<li><span class="math inline">\(PSm_{t=1} \sim
+Uniform(1,10000)\)</span></li>
+<li><span class="math inline">\(Sm2_{t=1} \sim
+Uniform(0,300)\)</span></li>
+<li><span class="math inline">\(PostSm1_{t=1} \sim
+Uniform(0,1000)\)</span></li>
+<li><span class="math inline">\(PostSm2_{t=1} \sim
+Uniform(0,1000)\)</span></li>
+<li><span class="math inline">\(Sp12_{t=1}^* \sim
+Uniform(0,100)\)</span></li>
+<li><span class="math inline">\(Sp21_{t=1}^* \sim
+Uniform(0,50)\)</span></li>
+</ul>
+</div>
+</div>
+<div class="section level3">
+<h3 id="modeling-the-priors-on-vital-rates-trough-an-exchangeable-hierarchical-structures">Modeling the priors on vital rates trough an exchangeable
+hierarchical structures<a class="anchor" aria-label="anchor" href="#modeling-the-priors-on-vital-rates-trough-an-exchangeable-hierarchical-structures"></a>
+</h3>
+<p>The model encompasses both demographic and environmental
+stochasticity by allowing an interannual random variability of the
+proportion of smolts migrating as 1+ Smolts and the marine survival rate
+of post-smolts. Interannual random variations are modeled through an
+exchangeable hierarchical structure <span class="citation">(<a href="#ref-gelman+2004" role="doc-biblioref"><strong>gelman+2004?</strong></a>)</span>, by
+assuming that the parameters of all years <span class="math inline">\(t\)</span> are randomly drawn from the same
+probability distribution conditioned by unknown parameters common to all
+years. Hierarchical structures allow to probabilistically share
+information among the different years and can improve the estimation of
+key parameters (<span class="citation">(<a href="#ref-McAllister+2004" role="doc-biblioref"><strong>McAllister+2004?</strong></a>)</span>;
+<span class="citation">(<a href="#ref-MichielsenMcAllister04" role="doc-biblioref"><strong>MichielsenMcAllister04?</strong></a>)</span>;
+<span class="citation">(<a href="#ref-RivotPrevost02" role="doc-biblioref"><strong>RivotPrevost02?</strong></a>)</span>).
+Here, an exchangeable hierarchical structure is used to mimic a
+between-year variability that is assumed to be random, without any
+particular time trends or covariates (<em>i.e.</em>, climate) to explain
+the variations.</p>
+<p>An exchangeable hierarchical structure is used to capture the
+between-year variability of the probability for a pre-smolt to smoltify
+as 1+ smolt. The <span class="math inline">\(logit\)</span>-transform of
+the <span class="math inline">\(\theta_{Sm1,t}\)</span>’s are a priori
+drawn in a Normal distribution with mean and variance parameters <span class="math inline">\(\phi_{1}=(\mu_{\theta_{Sm1}},\sigma_{\theta_{Sm1}})\)</span>
+shared between years. The <span class="math inline">\(\theta_{Sm1,t}\)</span>’s are then calculated by
+the inverse transformation <span class="math inline">\(logit^{-1}\)</span>:</p>
+<ul>
+<li><span class="math inline">\(logit(\theta_{Sm1,t}) \sim
+Normal(\mu_{\theta_{Sm1}},\sigma_{\theta_{Sm1}})\)</span></li>
+</ul>
+<p>The same procedure was applied for the survival rate of one year
+river-aged post-smolts, <span class="math inline">\(\gamma_{Sm1,t}\)</span>. The survival rates of two
+year river-aged post-smolts, <span class="math inline">\(\gamma_{Sm2,t}\)</span>, are defined based on the
+reasonable a priori constraint that the survival rate of two year
+river-aged post-smolts is always greater than for one year river-aged
+post-smolts, but with the same time variations. This constraint is
+specified in the <span class="math inline">\(logit\)</span> scale.</p>
+<ul>
+<li><span class="math inline">\(logit(\gamma_{Sm1,t}) \; \sim \;
+Normal(\mu_{\gamma_{Sm1}},\sigma_{\gamma_{Sm1}})\)</span></li>
+<li>
+<span class="math inline">\(logit(\gamma_{Sm2,t}) \; = \;
+logit(\gamma_{Sm1,t}) + \delta_{\gamma}\)</span>, <span class="math inline">\(\delta_{\gamma} \geq 0\)</span>
+</li>
+</ul>
+<p>Finally, the <span class="math inline">\(logit\)</span>-transform of
+the proportions of females in 1SW and 2SW fish, <span class="math inline">\(pf1_{t}\)</span> and <span class="math inline">\(pf2_{t}\)</span> are a priori independently drawn
+in Normal distributions with mean and variance parameters shared between
+years:</p>
+<ul>
+<li><span class="math inline">\(logit(pf1_{t}) \; \sim \;
+Normal(\mu_{pf1},\sigma_{pf1})\)</span></li>
+<li><span class="math inline">\(logit(pf2_{t}) \; \sim \;
+Normal(\mu_{pf2},\sigma_{pf2})\)</span></li>
+</ul>
+<p>Informative beta distributions based on prior ecological expertise
+are set for <span class="math inline">\(\gamma_{0+}\)</span> (survival
+rates of 0+ Juveniles) and <span class="math inline">\(\gamma_{Parr1}\)</span> (survival rate of 1+
+Parrs), with mean <span class="math inline">\(0.5\)</span> and <span class="math inline">\(0.66\)</span>, respectively. All the remaining
+parameters of the population dynamics are considered constant over time
+with rather diffuse prior distribution.</p>
+<p>Where we give the following prior distributions:</p>
+<p>We give the following prior distributions for the survival and
+migration rates:</p>
+<ul>
+<li><span class="math inline">\(\theta_{m1} \sim Beta(3,2)\)</span></li>
+<li><span class="math inline">\(\gamma_{res} \sim
+Beta(3,2)\)</span></li>
+<li><span class="math inline">\(\gamma_{parr1} \sim
+Beta(20,10)\)</span></li>
+<li>
+<span class="math inline">\(\mu_{\theta_{Sm1}} \sim Uniform(0,
+100)\)</span> and <span class="math inline">\(\sigma_{\theta_{Sm1}} \sim
+Uniform(0, 5)\)</span>
+</li>
+<li>
+<span class="math inline">\(\mu_{\theta_{Sm1}} \sim Uniform(0,
+100)\)</span> and <span class="math inline">\(\sigma_{\theta_{Sm1}} \sim
+Uniform(0, 5)\)</span>
+</li>
+<li>
+<span class="math inline">\(\mu_{pf1} \sim Normal(0,100)\)</span>
+and <span class="math inline">\(\sigma_{pf1} \sim
+Uniform(0,5)\)</span>
+</li>
+<li>
+<span class="math inline">\(\mu_{pf1} \sim Normal(0,100)\)</span>
+and <span class="math inline">\(\sigma_{pf2} \sim
+Uniform(0,5)\)</span>
+</li>
+</ul>
+<center>
+<div class="figure">
+<img src="figures/SalmonLifeCycle/DAGSalmonLifeCycle.png" style="width:80.0%;height:80.0%" alt=""><p class="caption">Figure 2 – DAG of the hidden dynamics for the
+Atlantic salmon life cycle including the observation process on both the
+smolt and spaner runs.</p>
+</div>
+</center>
+</div>
+<div class="section level3">
+<h3 id="data-and-observation-equations">Data and observation equations<a class="anchor" aria-label="anchor" href="#data-and-observation-equations"></a>
+</h3>
+<p>Let first have a glimpse of the data:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://pillar.r-lib.org/reference/glimpse.html" class="external-link">glimpse</a></span><span class="op">(</span><span class="va">SalmonLifeCycle</span><span class="op">)</span></span>
+<span><span class="co">#&gt; List of 25</span></span>
+<span><span class="co">#&gt;  $ n             : num 18</span></span>
+<span><span class="co">#&gt;  $ surf          : num 25229</span></span>
+<span><span class="co">#&gt;  $ fec1          : num 4635</span></span>
+<span><span class="co">#&gt;  $ fec2          : num 7965</span></span>
+<span><span class="co">#&gt;  $ Year          : int [1:18] 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 ...</span></span>
+<span><span class="co">#&gt;  $ c_Sp          : num [1:18] 167 264 130 16 226 235 15 44 31 100 ...</span></span>
+<span><span class="co">#&gt;  $ x_Sp1         : num [1:18] 10 37 28 3 35 31 4 0 10 17 ...</span></span>
+<span><span class="co">#&gt;  $ x_Sp2         : num [1:18] 3 11 9 1 8 5 4 0 1 2 ...</span></span>
+<span><span class="co">#&gt;  $ mad           : num [1:18] 154 216 93 12 183 199 7 44 20 81 ...</span></span>
+<span><span class="co">#&gt;  $ rmad          : num [1:18] 12 21 5 2 12 56 2 23 4 4 ...</span></span>
+<span><span class="co">#&gt;  $ r_unm         : num [1:18] 10 4 4 22 0 0 15 1 5 3 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp_age : num [1:18] 159 211 111 16 197 220 9 41 28 98 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp11   : num [1:18] 113 116 61 13 85 129 3 38 22 85 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp21   : num [1:18] 20 50 19 2 74 54 2 1 4 6 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp12   : num [1:18] 23 43 24 1 36 31 3 1 2 7 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp22   : num [1:18] 3 2 7 0 2 6 1 1 0 0 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp1_sex: num [1:18] 141 203 93 15 182 197 9 42 28 93 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp2_sex: num [1:18] 26 61 37 1 44 38 6 2 3 7 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp1f   : num [1:18] 40 69 31 1 63 64 3 13 11 22 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sp2f   : num [1:18] 21 42 26 1 31 21 4 1 2 3 ...</span></span>
+<span><span class="co">#&gt;  $ c_Sm          : num [1:18] NA 439 887 283 307 553 746 151 580 209 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sm_age : num [1:18] 1 439 887 283 307 553 746 151 580 209 ...</span></span>
+<span><span class="co">#&gt;  $ sample_Sm1    : num [1:18] NA 232 848 146 282 495 708 101 571 171 ...</span></span>
+<span><span class="co">#&gt;  $ m_Sm          : num [1:18] 86 86 135 31 59 65 38 35 50 26 ...</span></span>
+<span><span class="co">#&gt;  $ r_Sm          : num [1:18] NA NA 91 24 43 43 35 27 43 24 ...</span></span></code></pre></div>
+<p>Capture-mark-recapture and sampling data for smolts at the downstream
+trap by migration year (<span class="math inline">\(y_i^{Sm}\)</span>,
+<span class="math inline">\(i = 1, \dots, 5)\)</span>:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="va">SalmonLifeCycle</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">21</span><span class="op">:</span><span class="fl">25</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">Year</th>
+<th align="right">c_Sm</th>
+<th align="right">sample_Sm_age</th>
+<th align="right">sample_Sm1</th>
+<th align="right">m_Sm</th>
+<th align="right">r_Sm</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1984</td>
+<td align="right">NA</td>
+<td align="right">1</td>
+<td align="right">NA</td>
+<td align="right">86</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="right">1985</td>
+<td align="right">439</td>
+<td align="right">439</td>
+<td align="right">232</td>
+<td align="right">86</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="right">1986</td>
+<td align="right">887</td>
+<td align="right">887</td>
+<td align="right">848</td>
+<td align="right">135</td>
+<td align="right">91</td>
+</tr>
+<tr class="even">
+<td align="right">1987</td>
+<td align="right">283</td>
+<td align="right">283</td>
+<td align="right">146</td>
+<td align="right">31</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="right">1988</td>
+<td align="right">307</td>
+<td align="right">307</td>
+<td align="right">282</td>
+<td align="right">59</td>
+<td align="right">43</td>
+</tr>
+<tr class="even">
+<td align="right">1989</td>
+<td align="right">553</td>
+<td align="right">553</td>
+<td align="right">495</td>
+<td align="right">65</td>
+<td align="right">43</td>
+</tr>
+<tr class="odd">
+<td align="right">1990</td>
+<td align="right">746</td>
+<td align="right">746</td>
+<td align="right">708</td>
+<td align="right">38</td>
+<td align="right">35</td>
+</tr>
+<tr class="even">
+<td align="right">1991</td>
+<td align="right">151</td>
+<td align="right">151</td>
+<td align="right">101</td>
+<td align="right">35</td>
+<td align="right">27</td>
+</tr>
+<tr class="odd">
+<td align="right">1992</td>
+<td align="right">580</td>
+<td align="right">580</td>
+<td align="right">571</td>
+<td align="right">50</td>
+<td align="right">43</td>
+</tr>
+<tr class="even">
+<td align="right">1993</td>
+<td align="right">209</td>
+<td align="right">209</td>
+<td align="right">171</td>
+<td align="right">26</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="right">1994</td>
+<td align="right">329</td>
+<td align="right">329</td>
+<td align="right">323</td>
+<td align="right">17</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="right">1995</td>
+<td align="right">618</td>
+<td align="right">618</td>
+<td align="right">541</td>
+<td align="right">63</td>
+<td align="right">53</td>
+</tr>
+<tr class="odd">
+<td align="right">1996</td>
+<td align="right">767</td>
+<td align="right">767</td>
+<td align="right">684</td>
+<td align="right">76</td>
+<td align="right">58</td>
+</tr>
+<tr class="even">
+<td align="right">1997</td>
+<td align="right">205</td>
+<td align="right">205</td>
+<td align="right">186</td>
+<td align="right">63</td>
+<td align="right">31</td>
+</tr>
+<tr class="odd">
+<td align="right">1998</td>
+<td align="right">511</td>
+<td align="right">511</td>
+<td align="right">438</td>
+<td align="right">91</td>
+<td align="right">44</td>
+</tr>
+<tr class="even">
+<td align="right">1999</td>
+<td align="right">195</td>
+<td align="right">195</td>
+<td align="right">43</td>
+<td align="right">59</td>
+<td align="right">45</td>
+</tr>
+<tr class="odd">
+<td align="right">2000</td>
+<td align="right">1849</td>
+<td align="right">1849</td>
+<td align="right">1835</td>
+<td align="right">300</td>
+<td align="right">232</td>
+</tr>
+<tr class="even">
+<td align="right">2001</td>
+<td align="right">688</td>
+<td align="right">688</td>
+<td align="right">636</td>
+<td align="right">264</td>
+<td align="right">123</td>
+</tr>
+</tbody>
+</table>
+<p>Capture-mark-recapture and sampling data for spawners at the upstream
+trap by migration year (<span class="math inline">\(y_i^{S}\)</span>,
+<span class="math inline">\(i = 1, \dots, 6)\)</span>:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="va">SalmonLifeCycle</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">6</span><span class="op">:</span><span class="fl">11</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">Year</th>
+<th align="right">c_Sp</th>
+<th align="right">x_Sp1</th>
+<th align="right">x_Sp2</th>
+<th align="right">mad</th>
+<th align="right">rmad</th>
+<th align="right">r_unm</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1984</td>
+<td align="right">167</td>
+<td align="right">10</td>
+<td align="right">3</td>
+<td align="right">154</td>
+<td align="right">12</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="right">1985</td>
+<td align="right">264</td>
+<td align="right">37</td>
+<td align="right">11</td>
+<td align="right">216</td>
+<td align="right">21</td>
+<td align="right">4</td>
+</tr>
+<tr class="odd">
+<td align="right">1986</td>
+<td align="right">130</td>
+<td align="right">28</td>
+<td align="right">9</td>
+<td align="right">93</td>
+<td align="right">5</td>
+<td align="right">4</td>
+</tr>
+<tr class="even">
+<td align="right">1987</td>
+<td align="right">16</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">12</td>
+<td align="right">2</td>
+<td align="right">22</td>
+</tr>
+<tr class="odd">
+<td align="right">1988</td>
+<td align="right">226</td>
+<td align="right">35</td>
+<td align="right">8</td>
+<td align="right">183</td>
+<td align="right">12</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">1989</td>
+<td align="right">235</td>
+<td align="right">31</td>
+<td align="right">5</td>
+<td align="right">199</td>
+<td align="right">56</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">1990</td>
+<td align="right">15</td>
+<td align="right">4</td>
+<td align="right">4</td>
+<td align="right">7</td>
+<td align="right">2</td>
+<td align="right">15</td>
+</tr>
+<tr class="even">
+<td align="right">1991</td>
+<td align="right">44</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">44</td>
+<td align="right">23</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">1992</td>
+<td align="right">31</td>
+<td align="right">10</td>
+<td align="right">1</td>
+<td align="right">20</td>
+<td align="right">4</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="right">1993</td>
+<td align="right">100</td>
+<td align="right">17</td>
+<td align="right">2</td>
+<td align="right">81</td>
+<td align="right">4</td>
+<td align="right">3</td>
+</tr>
+<tr class="odd">
+<td align="right">1994</td>
+<td align="right">32</td>
+<td align="right">12</td>
+<td align="right">2</td>
+<td align="right">18</td>
+<td align="right">1</td>
+<td align="right">4</td>
+</tr>
+<tr class="even">
+<td align="right">1995</td>
+<td align="right">109</td>
+<td align="right">6</td>
+<td align="right">1</td>
+<td align="right">102</td>
+<td align="right">39</td>
+<td align="right">7</td>
+</tr>
+<tr class="odd">
+<td align="right">1996</td>
+<td align="right">70</td>
+<td align="right">13</td>
+<td align="right">2</td>
+<td align="right">55</td>
+<td align="right">25</td>
+<td align="right">57</td>
+</tr>
+<tr class="even">
+<td align="right">1997</td>
+<td align="right">56</td>
+<td align="right">19</td>
+<td align="right">3</td>
+<td align="right">34</td>
+<td align="right">12</td>
+<td align="right">3</td>
+</tr>
+<tr class="odd">
+<td align="right">1998</td>
+<td align="right">34</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">30</td>
+<td align="right">6</td>
+<td align="right">30</td>
+</tr>
+<tr class="even">
+<td align="right">1999</td>
+<td align="right">154</td>
+<td align="right">5</td>
+<td align="right">1</td>
+<td align="right">148</td>
+<td align="right">13</td>
+<td align="right">22</td>
+</tr>
+<tr class="odd">
+<td align="right">2000</td>
+<td align="right">53</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">53</td>
+<td align="right">4</td>
+<td align="right">33</td>
+</tr>
+<tr class="even">
+<td align="right">2001</td>
+<td align="right">160</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">159</td>
+<td align="right">31</td>
+<td align="right">4</td>
+</tr>
+</tbody>
+</table>
+<p>Capture-mark-recapture and sampling data for spawners at the upstream
+trap by migration year (<span class="math inline">\(y_i^{S}\)</span>,
+<span class="math inline">\(i = 7, \dots, 15)\)</span> (continued):</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="va">SalmonLifeCycle</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">12</span><span class="op">:</span><span class="fl">20</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="4%">
+<col width="11%">
+<col width="9%">
+<col width="9%">
+<col width="9%">
+<col width="9%">
+<col width="12%">
+<col width="12%">
+<col width="9%">
+<col width="9%">
+</colgroup>
+<thead><tr class="header">
+<th align="right">Year</th>
+<th align="right">sample_Sp_age</th>
+<th align="right">sample_Sp11</th>
+<th align="right">sample_Sp21</th>
+<th align="right">sample_Sp12</th>
+<th align="right">sample_Sp22</th>
+<th align="right">sample_Sp1_sex</th>
+<th align="right">sample_Sp2_sex</th>
+<th align="right">sample_Sp1f</th>
+<th align="right">sample_Sp2f</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1984</td>
+<td align="right">159</td>
+<td align="right">113</td>
+<td align="right">20</td>
+<td align="right">23</td>
+<td align="right">3</td>
+<td align="right">141</td>
+<td align="right">26</td>
+<td align="right">40</td>
+<td align="right">21</td>
+</tr>
+<tr class="even">
+<td align="right">1985</td>
+<td align="right">211</td>
+<td align="right">116</td>
+<td align="right">50</td>
+<td align="right">43</td>
+<td align="right">2</td>
+<td align="right">203</td>
+<td align="right">61</td>
+<td align="right">69</td>
+<td align="right">42</td>
+</tr>
+<tr class="odd">
+<td align="right">1986</td>
+<td align="right">111</td>
+<td align="right">61</td>
+<td align="right">19</td>
+<td align="right">24</td>
+<td align="right">7</td>
+<td align="right">93</td>
+<td align="right">37</td>
+<td align="right">31</td>
+<td align="right">26</td>
+</tr>
+<tr class="even">
+<td align="right">1987</td>
+<td align="right">16</td>
+<td align="right">13</td>
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">15</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">1988</td>
+<td align="right">197</td>
+<td align="right">85</td>
+<td align="right">74</td>
+<td align="right">36</td>
+<td align="right">2</td>
+<td align="right">182</td>
+<td align="right">44</td>
+<td align="right">63</td>
+<td align="right">31</td>
+</tr>
+<tr class="even">
+<td align="right">1989</td>
+<td align="right">220</td>
+<td align="right">129</td>
+<td align="right">54</td>
+<td align="right">31</td>
+<td align="right">6</td>
+<td align="right">197</td>
+<td align="right">38</td>
+<td align="right">64</td>
+<td align="right">21</td>
+</tr>
+<tr class="odd">
+<td align="right">1990</td>
+<td align="right">9</td>
+<td align="right">3</td>
+<td align="right">2</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">9</td>
+<td align="right">6</td>
+<td align="right">3</td>
+<td align="right">4</td>
+</tr>
+<tr class="even">
+<td align="right">1991</td>
+<td align="right">41</td>
+<td align="right">38</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">42</td>
+<td align="right">2</td>
+<td align="right">13</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">1992</td>
+<td align="right">28</td>
+<td align="right">22</td>
+<td align="right">4</td>
+<td align="right">2</td>
+<td align="right">0</td>
+<td align="right">28</td>
+<td align="right">3</td>
+<td align="right">11</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">1993</td>
+<td align="right">98</td>
+<td align="right">85</td>
+<td align="right">6</td>
+<td align="right">7</td>
+<td align="right">0</td>
+<td align="right">93</td>
+<td align="right">7</td>
+<td align="right">22</td>
+<td align="right">3</td>
+</tr>
+<tr class="odd">
+<td align="right">1994</td>
+<td align="right">29</td>
+<td align="right">24</td>
+<td align="right">3</td>
+<td align="right">2</td>
+<td align="right">0</td>
+<td align="right">30</td>
+<td align="right">2</td>
+<td align="right">18</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">1995</td>
+<td align="right">108</td>
+<td align="right">88</td>
+<td align="right">17</td>
+<td align="right">3</td>
+<td align="right">0</td>
+<td align="right">106</td>
+<td align="right">3</td>
+<td align="right">45</td>
+<td align="right">3</td>
+</tr>
+<tr class="odd">
+<td align="right">1996</td>
+<td align="right">60</td>
+<td align="right">48</td>
+<td align="right">9</td>
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">67</td>
+<td align="right">3</td>
+<td align="right">27</td>
+<td align="right">3</td>
+</tr>
+<tr class="even">
+<td align="right">1997</td>
+<td align="right">52</td>
+<td align="right">47</td>
+<td align="right">4</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">55</td>
+<td align="right">1</td>
+<td align="right">21</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">1998</td>
+<td align="right">28</td>
+<td align="right">22</td>
+<td align="right">5</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">33</td>
+<td align="right">1</td>
+<td align="right">10</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">1999</td>
+<td align="right">140</td>
+<td align="right">105</td>
+<td align="right">18</td>
+<td align="right">12</td>
+<td align="right">5</td>
+<td align="right">136</td>
+<td align="right">18</td>
+<td align="right">43</td>
+<td align="right">13</td>
+</tr>
+<tr class="odd">
+<td align="right">2000</td>
+<td align="right">51</td>
+<td align="right">45</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="right">49</td>
+<td align="right">4</td>
+<td align="right">26</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">2001</td>
+<td align="right">140</td>
+<td align="right">120</td>
+<td align="right">14</td>
+<td align="right">5</td>
+<td align="right">1</td>
+<td align="right">151</td>
+<td align="right">9</td>
+<td align="right">51</td>
+<td align="right">3</td>
+</tr>
+</tbody>
+</table>
+<p>The observations (1984 - 2001) have been gathered under an
+homogeneous experimental design and few data are missing. Each annual
+survey provides two complementary sources of information, the number of
+smolts and spawners in each annual run, and the demographic structure
+(age classes and sex-ratio) in smolts and adult runs.</p>
+</div>
+<div class="section level3">
+<h3 id="updating-the-population-size-at-the-various-life-stages">Updating the population size at the various life stages<a class="anchor" aria-label="anchor" href="#updating-the-population-size-at-the-various-life-stages"></a>
+</h3>
+<p>Available information to estimate the size of smolt and spawner runs
+does not distinguish between the age classes. For both the smolts and
+the spawners, a proportion of the migrating population is captured at a
+partial counting fence and marked for further recapture. CMR experiments
+provide data to update the total number of smolts migrating in year
+<span class="math inline">\(t\)</span>, <span class="math inline">\(Sm_{t} = Sm1_{t}+Sm2_{t}\)</span>, and the total
+number of spawners returning in year <span class="math inline">\(t\)</span>, <span class="math inline">\(Sp_{t}=Sp11_{t}+Sp12_{t}+Sp21_{t}+Sp22_{t}\)</span>.</p>
+<div class="section level4">
+<h4 id="smolt-run">Smolt run<a class="anchor" aria-label="anchor" href="#smolt-run"></a>
+</h4>
+<center>
+<div class="figure">
+<img src="figures/CmrOir/CeriselTrap.png" style="width:80.0%;height:80.0%" alt=""><p class="caption">Figure 3 – Schame of the Cerisel trapping facility
+(Oir river, Normandy, France) working as a double downstream (for smolt
+runs) and upstream (for spawner runs) partial counting fence. The black
+circles at the top of the figure indicates the release site of tagged
+smolts and spawners. The release site and the downstream trap are 1 km
+away from each other.</p>
+</div>
+</center>
+<p>CMR experiments for smolts are analogous to the two-stage Petersen
+experiment (). For each year <span class="math inline">\(t\)</span>
+between 1986 and 2001, let us denote <span class="math inline">\(y_{1,t}^{Sm}\)</span> the number of smolts caught
+in the downstream trapping facility during the migration time. Among the
+<span class="math inline">\(y_{1,t}^{Sm}\)</span> smolts captured, a
+number <span class="math inline">\(y_{2,t}^{Sm}\)</span> have been
+tagged and released upstream from the trapping facility used for
+capture. Some of these tagged and released smolts, denoted <span class="math inline">\(y_{3,t}^{Sm}\)</span> (<span class="math inline">\(y_{3,t}^{Sm}&lt;y_{2,t}% ^{Sm}\)</span>), will be
+recaptured at the same downstream trap. The capture and recapture data
+for each year <span class="math inline">\(t\)</span> can be modeled by
+two successive Binomial distributions with the same capture
+probabilities <span class="math inline">\(\pi_{t}^{Sm}\)</span>
+(interpreted as the trapping efficiency that may vary between
+years):</p>
+<ul>
+<li><span class="math inline">\(y^{Sm}_{1,t} \; \sim \;
+Binomial(Sm_{t},\pi^{Sm}_{t})\)</span></li>
+<li><span class="math inline">\(y^{Sm}_{3,t} \; \sim \;
+Binomial(y^{Sm}_{2,t},\pi^{Sm}_{t})\)</span></li>
+</ul>
+<p>Intuitively, the second Binomial equation will contribute to specify
+the trapping efficiency <span class="math inline">\(\pi_{Sm,t}\)</span>,
+while the first one brings information to update the total number of
+downstream migrating smolts <span class="math inline">\(Sm_{t}\)</span>.</p>
+</div>
+<div class="section level4">
+<h4 id="spawner-run">Spawner run<a class="anchor" aria-label="anchor" href="#spawner-run"></a>
+</h4>
+<p>Conversely to smolts, CMR experiments for spawners cannot be
+assimilated to a simple Petersen experiment. For each year <span class="math inline">\(t\)</span> from <span class="math inline">\(1984\)</span> to <span class="math inline">\(2001\)</span>, <span class="math inline">\(y_{1,t}^{Sp}\)</span> denotes the number of fish
+trapped at the counting fence. Among these <span class="math inline">\(y_{1,t}^{Sp}\)</span> fish, <span class="math inline">\(y_{2,t}^{Sp}\)</span> one sea-winter and <span class="math inline">\(y_{3,t}^{Sp}\)</span> two sea-winter fish are
+removed from the population. A number <span class="math inline">\(y_{4,t}%
+^{Sp}=y_{1,t}^{Sp}-(y_{2,t}^{Sp}+y_{3,t}^{Sp})\)</span> of fish are
+tagged and released upstream from the trap. The recapture sample is
+gathered during and after spawning by three methods (electrofishing on
+the spawning grounds, collection of dead fish after spawning, and
+trapping of spent fish at the downstream trap). Let us denote as <span class="math inline">\(y_{5,t}^{Sp}\)</span> and <span class="math inline">\(y_{6,t}^{Sp}\)</span> the number of marked and
+unmarked fish among recaptured fish, respectively.</p>
+<ul>
+<li><span class="math inline">\(y^{Sp}_{1,t} \; \sim \;
+Binomial(Sp_{t},\pi^{Sp,1}_{t})\)</span></li>
+<li><span class="math inline">\(y^{Sp}_{5,t} \; \sim \;
+Binomial(y^{Sp}_{4,t},\pi^{Sp,2}_{t})\)</span></li>
+<li><span class="math inline">\(y^{Sp}_{6,t} \; \sim \;
+Binomial(Sp_{t}-y^{Sp}_{1,t},\pi^{Sp,2}_{t})\)</span></li>
+</ul>
+<p>The reasoning underlying how the information contained in the data is
+used in the three lines is as follows: the second line essentially
+conveys information to estimate the recapture probability <span class="math inline">\(\pi _{t}^{Sp,2}\)</span>. Both the third and the
+first line carry information on the total number of spawners <span class="math inline">\(Sp_{t}\)</span>.</p>
+</div>
+<div class="section level4">
+<h4 id="hierarchical-prior-on-the-trapping-efficiencies">Hierarchical prior on the trapping efficiencies<a class="anchor" aria-label="anchor" href="#hierarchical-prior-on-the-trapping-efficiencies"></a>
+</h4>
+<p>The between-year variability of the probabilities of capture <span class="math inline">\(\pi_{t}^{Sm}\)</span>, <span class="math inline">\(\pi_{t}^{Sp,1}\)</span> and <span class="math inline">\(\pi_{t}^{Sp,2}\)</span> is modeled through
+exchangeable hierarchical structures with hyper-parameters denoted <span class="math inline">\(\phi_{Sm}\)</span>, <span class="math inline">\(\phi_{Sp,1}\)</span> and <span class="math inline">\(\phi_{Sp,2}\)</span> respectively. Instead of
+drawing the <span class="math inline">\(\pi\)</span>’s in beta
+distributions, the <span class="math inline">\(logit\)</span>-transform
+of the <span class="math inline">\(\pi\)</span>’s are drawn from Normal
+distributions with mean and variance parameters shared between years.
+The <span class="math inline">\(\pi\)</span>’s are then calculated by
+the inverse transformation <span class="math inline">\(logit^{-1}\)</span>.</p>
+<ul>
+<li>
+<span class="math inline">\(logit(\pi^{Sm}_{t}) \; \sim \;
+Normal(\mu_{\pi_{Sm}},\sigma_{\pi_{Sm}})\)</span><br>
+</li>
+<li><span class="math inline">\(logit(\pi^{Sp,1}_{t}) \; \sim \;
+Normal(\mu_{\pi_{Sp,1}},\sigma_{\pi_{Sp,1}})\)</span></li>
+<li><span class="math inline">\(logit(\pi^{Sp,2}_{t}) \; \sim \;
+Normal(\mu_{\pi_{Sp,2}},\sigma_{\pi_{Sp,2}})\)</span></li>
+</ul>
+<p>We set diffuse prior distribution on the parameters of the Normal
+distributions:</p>
+<ul>
+<li>
+<span class="math inline">\(\mu_{\pi_{Sm}} \sim
+Normal(0,100)\)</span> and <span class="math inline">\(\sigma_{\pi_{Sm}}
+\sim Uniform(0,5)\)</span>
+</li>
+<li>
+<span class="math inline">\(\mu_{\pi_{Sp,1}} \sim
+Normal(0,100)\)</span> and <span class="math inline">\(\sigma_{\pi_{Sp,1}} \sim
+Uniform(0,5)\)</span>
+</li>
+<li>
+<span class="math inline">\(\mu_{\pi_{Sp,2}} \sim
+Normal(0,100)\)</span> and <span class="math inline">\(\sigma_{\pi_{Sp,2}} \sim
+Uniform(0,5)\)</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="section level3">
+<h3 id="updating-the-demographic-structure">Updating the demographic structure<a class="anchor" aria-label="anchor" href="#updating-the-demographic-structure"></a>
+</h3>
+<p>In addition to the CMR data, sampling among the fish caught at the
+trap enables us to update the yearly proportions of the age classes in
+the smolt and spawner runs <span class="math inline">\(Sm_{t}\)</span>
+and <span class="math inline">\(Sp_{t}\)</span>, and the mean sex ratio
+in the spawner run. For each demographic feature, sampling is modeled by
+independent Binomial or multinomial processes.</p>
+<div class="section level4">
+<h4 id="river-age-in-smolt-run">River age in smolt run<a class="anchor" aria-label="anchor" href="#river-age-in-smolt-run"></a>
+</h4>
+<p><span class="math inline">\(y^{Sm}_{4,t}\)</span> denotes the sample
+size of smolts examined for river-age in the run of year <span class="math inline">\(t\)</span> and <span class="math inline">\(y^{Sm}_{5}\)</span> is the number of 1+ Smolts
+among them. The proportion of 1+ Smolts in year <span class="math inline">\(t\)</span>, denoted <span class="math inline">\(\rho_{Sm1,t}\)</span> is updated by modeling <span class="math inline">\(y^{Sm}_{5}\)</span> as the result of a Binomial
+sampling with a sample size <span class="math inline">\(y^{Sm}_{4,t}\)</span> and a probability <span class="math inline">\(\rho_{Sm1,t}\)</span>:</p>
+<ul>
+<li><span class="math inline">\(\rho_{Sm1,t} = \frac{Sm1_{t}}{Sm1_{t} +
+Sm2_{t}}\)</span></li>
+<li><span class="math inline">\(y^{Sm}_{5,t} \; \sim \;
+Binomial(y^{Sm}_{4,t},\rho_{Sm1,t})\)</span></li>
+</ul>
+</div>
+<div class="section level4">
+<h4 id="sea-and-river-age-in-spawner-run">Sea and River-age in spawner run<a class="anchor" aria-label="anchor" href="#sea-and-river-age-in-spawner-run"></a>
+</h4>
+<p><span class="math inline">\(y_{7,t}^{Sp}\)</span> denotes the sample
+size of spawners examined for sea and river-age in the run of year <span class="math inline">\(t\)</span>. <span class="math inline">\(y_{8,t}^{Sp}\)</span> and <span class="math inline">\(y_{9,t}^{Sp}\)</span> are the number of 1SW fish
+resulting from 1+ and 2+ Smolts, respectively among <span class="math inline">\(y_{7,t}^{Sp}\)</span>, and <span class="math inline">\(y_{10,t}^{Sp}\)</span> and <span class="math inline">\(y_{11,t}^{Sp}\)</span> are the number of 2SW fish
+issued from 1+ and 2+ Smolts, respectively among <span class="math inline">\(y_{7,t}^{Sp}\)</span>. The proportions of the four
+different age classes in each spawning run (summing to <span class="math inline">\(1\)</span>) are updated through a multinomial
+model:</p>
+<ul>
+<li>$ _{Sp,t} = ( , , , )$</li>
+<li><span class="math inline">\((y^{Sp}_{8,t},y^{Sp}_{9,t},y^{Sp}_{10,t},y^{Sp}_{11,t})
+\; \sim \; Multinomial(y^{Sp}_{7,t},\rho_{Sp,t})\)</span></li>
+</ul>
+</div>
+<div class="section level4">
+<h4 id="sex-ratio-in-spawner-run">Sex ratio in spawner run<a class="anchor" aria-label="anchor" href="#sex-ratio-in-spawner-run"></a>
+</h4>
+<p>Sex-ratio in spawner runs are updated each year <span class="math inline">\(t\)</span> through Binomial sampling experiments
+considered independent for one and two sea-winter fish. Each year <span class="math inline">\(t\)</span>, <span class="math inline">\(y^{Sp}_{12,t}\)</span> 1SW fish (resp. <span class="math inline">\(y^{Sp}_{14,t}\)</span> 2SW fish) are examined for
+sex identification and <span class="math inline">\(y^{Sp}_{13,t}\)</span> (resp. <span class="math inline">\(y^{Sp}_{15,t}\)</span>) are identified as females
+among them. Proportion of females in the two sea-age classes <span class="math inline">\(pf_{1,t}\)</span> and <span class="math inline">\(pf_{2,t}\)</span> are updated through Binomial
+sampling:</p>
+<ul>
+<li>$ y^{Sp}<em>{13,t} Binomial(y^{Sp}</em>{12,t},pf_{1,t})$</li>
+<li>$ y^{Sp}<em>{14,t} Binomial(y^{Sp}</em>{15,t},pf_{2,t})$</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="model-estimation">Model estimation<a class="anchor" aria-label="anchor" href="#model-estimation"></a>
+</h2>
+<p>We will remove the data from 1984 and 1985 as there are missing data
+(<code>NA</code>).</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="va">SalmonLifeCycle</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span>  <span class="fl">16</span></span>
+<span><span class="va">data</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span><span class="op">:</span><span class="fl">25</span><span class="op">)</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="va">SalmonLifeCycle</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span><span class="op">:</span><span class="fl">25</span><span class="op">)</span><span class="op">]</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">Year</span> <span class="op">&gt;=</span> <span class="fl">1986</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">sample_Sp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="va">data</span><span class="op">[</span><span class="fl">13</span><span class="op">:</span><span class="fl">16</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">model_str</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<span><span class="st">model {</span></span>
+<span><span class="st"># ---------------------------------------------------------------------------</span></span>
+<span><span class="st">#                               PRIORS  </span></span>
+<span><span class="st"># ---------------------------------------------------------------------------</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Priors for Ricker stock-recruitmnt parameters</span></span>
+<span><span class="st"># R = alpha*exp(-beta*S)</span></span>
+<span><span class="st"># alpha constrained &lt;1 becasue it is a survival rate eggs --&gt; 0+</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    log.alpha ~ dunif(-10,0)        </span></span>
+<span><span class="st">    alpha &lt;- exp(log.alpha)</span></span>
+<span><span class="st">    beta ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    exp.beta &lt;- exp(beta)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st"># Prior for recruitment process error variance</span></span>
+<span><span class="st"># (Corresponds to approximative 1/V between 1E-6 and 1E+6)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    log.sigma_2 ~ dunif(-13.8,13.8)</span></span>
+<span><span class="st">    sigma_2 &lt;- exp(log.sigma_2)</span></span>
+<span><span class="st">    tau &lt;- 1/sigma_2</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Survival rate Juveniles 0+ --&gt; Pre-smolts1 (constant between years)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    s01 ~ dbeta(15,15)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Life history choice - probability to migrate as Smolt 1</span></span>
+<span><span class="st"># (exchangeable hierarchical structure between years)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    mu_theta_Sm1 ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    sd_theta_Sm1  ~ dunif(0,5)</span></span>
+<span><span class="st">    tau_theta_Sm1 &lt;- 1/(sd_theta_Sm1*sd_theta_Sm1)</span></span>
+<span><span class="st">    # Indice [n+1] is the predictive</span></span>
+<span><span class="st">    for( i in 1:(n+1) )     {</span></span>
+<span><span class="st">    logit_theta_Sm1[i] ~ dnorm(mu_theta_Sm1,tau_theta_Sm1)</span></span>
+<span><span class="st">    logit(theta_Sm1[i]) &lt;- logit_theta_Sm1[i]           }</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Survival rate Parr 1+ resident --&gt; Smolts 2 (constant between years)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    s12 ~ dbeta(20,10)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Transition Smolt1 --&gt; post-smolts (survival during the first year at sea)</span></span>
+<span><span class="st"># (exchangeable hierarchical structure between years)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    mu_ss11 ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    sd_ss11 ~ dunif(0,5)</span></span>
+<span><span class="st">    tau_ss11 &lt;- 1/(sd_ss11*sd_ss11)</span></span>
+<span><span class="st">    # Indice [n+1] is the predictive</span></span>
+<span><span class="st">    for( i in 1 : (n+1) )   {</span></span>
+<span><span class="st">    logit_ss11[i] ~ dnorm(mu_ss11,tau_ss11)</span></span>
+<span><span class="st">    logit(ss11[i]) &lt;- logit_ss11[i]</span></span>
+<span><span class="st">    logit(ss21[i]) &lt;- logit_ss11[i] + delta_ss1 }</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Differential in survival rate between Sm1 and Sm2 (constant between years)</span></span>
+<span><span class="st"># logit(ss21) = logit(ss11) + delta_ss1</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    delta_ss1 ~ dunif(0,10)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Proportion of maturing adults as 1SW (constant between years)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    theta_m1 ~ dbeta(3,2)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Marine survival rate for non maturing 1SW post-smolts</span></span>
+<span><span class="st"># Survival probability is the same for non maturing post.smolts1 and post.smolts2 </span></span>
+<span><span class="st"># (ss12 = ss22) and constant accross year</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    ss2 ~ dbeta(3,2)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Proportion of females pf1 and pf2 (exchangeable hierarchical structure between years)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    mu_pf1 ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    sd_pf1 ~ dunif(0,5)</span></span>
+<span><span class="st">    tau_pf1 &lt;- 1/(sd_pf1*sd_pf1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    mu_pf2 ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    sd_pf2 ~ dunif(0,5)</span></span>
+<span><span class="st">    tau_pf2 &lt;- 1/(sd_pf2*sd_pf2)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    # Indice [n+1] is the predictive</span></span>
+<span><span class="st">    for( i in 1 : (n+1) )   {</span></span>
+<span><span class="st">    logit_pf1[i] ~ dnorm(mu_pf1,tau_pf1)</span></span>
+<span><span class="st">    logit(pf1[i]) &lt;- logit_pf1[i]</span></span>
+<span><span class="st">    logit_pf2[i] ~ dnorm(mu_pf2,tau_pf2)</span></span>
+<span><span class="st">    logit(pf2[i]) &lt;- logit_pf2[i]       }</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">#  Trapping efficiencies (exchangeable hierarchical structure between years)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    # Smolts</span></span>
+<span><span class="st">    mu_pi_sm ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    sd_pi_sm ~ dunif(0,5)</span></span>
+<span><span class="st">    tau_pi_sm &lt;- 1/(sd_pi_sm*sd_pi_sm)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Adults</span></span>
+<span><span class="st">    mu_pi_sp1 ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    sd_pi_sp1 ~ dunif(0,5)</span></span>
+<span><span class="st">    tau_pi_sp1 &lt;- 1/(sd_pi_sp1*sd_pi_sp1)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Adults recapture efficiency</span></span>
+<span><span class="st">    mu_pi_sp2 ~ dnorm(0,0.01)</span></span>
+<span><span class="st">    sd_pi_sp2 ~ dunif(0,5)</span></span>
+<span><span class="st">    tau_pi_sp2 &lt;- 1/(sd_pi_sp2*sd_pi_sp2)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    # Indice [n+1] is the predictive</span></span>
+<span><span class="st">    for( i in 1 : (n+1) )   {</span></span>
+<span><span class="st">    # Smolts</span></span>
+<span><span class="st">    logit_pi_sm[i] ~ dnorm(mu_pi_sm,tau_pi_sm)</span></span>
+<span><span class="st">    logit(pi_sm[i]) &lt;- logit_pi_sm[i]</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Adults</span></span>
+<span><span class="st">    logit_pi_sp1[i] ~ dnorm(mu_pi_sp1,tau_pi_sp1)</span></span>
+<span><span class="st">    logit(pi_sp1[i]) &lt;- logit_pi_sp1[i]</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    # Adults recapture efficiency</span></span>
+<span><span class="st">    logit_pi_sp2[i] ~ dnorm(mu_pi_sp2,tau_pi_sp2)</span></span>
+<span><span class="st">    logit(pi_sp2[i]) &lt;- logit_pi_sp2[i]     }</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># ---------------------------------------------------------------------------</span></span>
+<span><span class="st">#           PROCESS EQUATIOnS (hidden population dynamics)</span></span>
+<span><span class="st"># ---------------------------------------------------------------------------</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Prior on states for the first year</span></span>
+<span><span class="st">    dSp12 &lt;- rep(1, 100)</span></span>
+<span><span class="st">    dSp22 &lt;- rep(1, 50)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    Sp12[1] ~ dcat(dSp12)</span></span>
+<span><span class="st">    Sp22[1] ~ dcat(dSp22)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    dSm2 &lt;- rep(1, 300)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    Sm2[1] ~ dcat(dSm2)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    Jint[1] ~ dunif(0,1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">  dPSm &lt;- rep(1, 10000)</span></span>
+<span><span class="st">    PSm[1] ~ dcat(dPSm)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    dPostSm1 &lt;- rep(1, 1000)</span></span>
+<span><span class="st">    dPostSm2 &lt;- rep(1, 1000)    </span></span>
+<span><span class="st">    post.smolt1[1] ~ dcat(dPostSm1)</span></span>
+<span><span class="st">    post.smolt2[1] ~ dcat(dPostSm2)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">#  Loop on time series (n = 18, i = 1 is year 1984, i = n is year 2001)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">for( i in 1 : n ){</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    Sp1[i] &lt;- Sp11[i] + Sp21[i]</span></span>
+<span><span class="st">    Sp2[i] &lt;- Sp12[i] + Sp22[i]</span></span>
+<span><span class="st">    Sp[i] &lt;- Sp1[i] + Sp2[i]</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st"># Stock (eggs) : number of female = marked and released + escape from the trap</span></span>
+<span><span class="st"># Standardized per m² of wetted production area</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    Eggs[i] &lt;- max( ( (Sp1[i]-x_Sp1[i]) * pf1[i] * fec1  + (Sp2[i]-x_Sp2[i]) * pf2[i] * fec2 )  /  surf, 1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    p_Eggs1[i] &lt;- max(  (Sp1[i]-x_Sp1[i]) * pf1[i] * fec1 / surf ,1) / Eggs[i] </span></span>
+<span><span class="st">    </span></span>
+<span><span class="st"># Ricker * Lognormal Process errors for recruitment</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    LogRmean[i] &lt;- log(Eggs[i]*alpha*exp(-beta*Eggs[i]))</span></span>
+<span><span class="st">    Jint[i+1] ~ dlnorm(LogRmean[i],tau)</span></span>
+<span><span class="st">    J[i] &lt;- round(Jint[i]*surf)</span></span>
+<span><span class="st">        </span></span>
+<span><span class="st">    egg_juv_surv[i] &lt;- Jint[i+1]/Eggs[i]</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st"># Transition Juveniles 0+ --&gt; pre-smolts PSm with survival s01</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    PSm[i+1] &lt;-  max(round(s01 * J[i]), 1)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st"># Transition to smolts 1+ and 2+ with life history choice theta_Sm1</span></span>
+<span><span class="st"># Survival of resident Parr1 = s12 gamma_Parr1</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    Sm1[i]   &lt;- max(round(theta_Sm1[i] * PSm[i]), 1)</span></span>
+<span><span class="st">    Parr1[i] &lt;- max(PSm[i] - Sm1[i],1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    Sm2[i+1] &lt;- max(round(s12 * Parr1[i]), 1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Transition Smolt1 --&gt; post-smolts (survival during the first year at sea)</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    post.smolt1[i+1] &lt;- max(round(ss11[i] * Sm1[i]), 1)</span></span>
+<span><span class="st">    post.smolt2[i+1] &lt;- max(round(ss21[i] * Sm2[i]), 1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Maturation of post-smolts (1 and 2) as 1SW fish (with probability theta_m1)</span></span>
+<span><span class="st"># Maturing probability (theta_m1) is the same for post.smolts1 and post.smolts2 </span></span>
+<span><span class="st"># and constant accross year</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    Sp11[i] &lt;- max(round(theta_m1 * post.smolt1[i]), 1)</span></span>
+<span><span class="st">    Sp21[i] &lt;- max(round(theta_m1 * post.smolt2[i]), 1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Survival during the second year at sea</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    Res1[i]   &lt;- max(post.smolt1[i] - Sp11[i],1)</span></span>
+<span><span class="st">    Sp12[i+1] &lt;- max(round(ss2 * Res1[i]),1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    Res2[i]   &lt;- max(post.smolt2[i] - Sp21[i],1)</span></span>
+<span><span class="st">    Sp22[i+1] &lt;- max(round(ss2 * Res2[i]),1)</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">}  # end of the loop on i</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">mean_p_Eggs1 &lt;- mean(p_Eggs1[])</span></span>
+<span><span class="st">mean_egg_juv_surv &lt;- mean(egg_juv_surv[])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># ---------------------------------------------------------------------------</span></span>
+<span><span class="st">#                       OBSERVATIOn EQUATIONS</span></span>
+<span><span class="st"># ---------------------------------------------------------------------------</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">for( i in 1 : n )</span></span>
+<span><span class="st">{</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Smolts</span></span>
+<span><span class="st"># --------------------------------</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Catches</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    Sm[i] &lt;- Sm1[i]+Sm2[i]</span></span>
+<span><span class="st">    c_Sm[i] ~ dbin(pi_sm[i],Sm[i])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Recaptures</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    r_Sm[i] ~ dbin(pi_sm[i],m_Sm[i])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Updating of river-age proportions in smolts runs</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    p_Sm1[i] &lt;- Sm1[i]/(Sm1[i]+Sm2[i])</span></span>
+<span><span class="st">    sample_Sm1[i] ~ dbin(p_Sm1[i],sample_Sm_age[i])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Adults</span></span>
+<span><span class="st"># --------------------------------</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Updating total numbers</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st"># Catches       </span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    c_Sp[i] ~ dbin(pi_sp1[i],Sp[i])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Recaptured marked</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    rmad[i] ~ dbin(pi_sp2[i],mad[i])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Recaptured unmarked (r_unm[i] among a total of escnet[i] unmarked fish)</span></span>
+<span><span class="st"># where escnet[i] are adults that escaped to the trap = Sp - c_Sp</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    escnet[i] &lt;- Sp[i] - c_Sp[i]</span></span>
+<span><span class="st">    r_unm[i] ~ dbin(pi_sp2[i], escnet[i])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st"># Updating the demographic structure</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    p_Sp[i,1] &lt;- Sp11[i]/Sp[i]</span></span>
+<span><span class="st">    p_Sp[i,2] &lt;- Sp12[i]/Sp[i]</span></span>
+<span><span class="st">    p_Sp[i,3] &lt;- Sp21[i]/Sp[i]</span></span>
+<span><span class="st">    p_Sp[i,4] &lt;- Sp22[i]/Sp[i]</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    p_Sp1[i] &lt;- Sp1[i] / Sp[i] </span></span>
+<span><span class="st">    p_Sp11[i] &lt;- Sp11[i] / Sp1[i]</span></span>
+<span><span class="st">    p_Sp12[i] &lt;- Sp12[i] / Sp2[i]</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    #x[i,1] &lt;-  sample_Sp11[i]</span></span>
+<span><span class="st">    #x[i,2] &lt;-  sample_Sp12[i]</span></span>
+<span><span class="st">    #x[i,3] &lt;-  sample_Sp21[i]</span></span>
+<span><span class="st">    #x[i,4] &lt;-  sample_Sp22[i]</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st">    sample_Sp[i,1:4] ~ dmulti(p_Sp[i,1:4], sample_Sp_age[i])</span></span>
+<span><span class="st">    </span></span>
+<span><span class="st"># Updating female proportions in 1SW and 2SW</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    sample_Sp1f[i] ~ dbin(pf1[i],sample_Sp1_sex[i])</span></span>
+<span><span class="st">    sample_Sp2f[i] ~ dbin(pf2[i],sample_Sp2_sex[i])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">}  # end of the loop on i</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    mean_p_Sm1 &lt;- mean(p_Sm1[])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">    mean_p_Sp1 &lt;- mean(p_Sp1[])</span></span>
+<span><span class="st">    mean_p_Sp11 &lt;- mean(p_Sp11[])</span></span>
+<span><span class="st">    mean_p_Sp12 &lt;- mean(p_Sp12[])</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">}  # End of the model"</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">var_prod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"alpha"</span>, <span class="st">"beta"</span>, <span class="st">"sigma_2"</span><span class="op">)</span></span>
+<span><span class="va">var_survival</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s01"</span>, <span class="st">"s12"</span>, <span class="st">"ss2"</span>, <span class="st">"ss11"</span>, <span class="st">"ss21"</span><span class="op">)</span></span>
+<span><span class="va">var_migration</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"theta_Sm1"</span>, <span class="st">"delta_ss1"</span>, <span class="st">"theta_m1"</span><span class="op">)</span></span>
+<span><span class="va">var_female</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pf1"</span>, <span class="st">"pf2"</span><span class="op">)</span></span>
+<span><span class="va">var_trapping</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pi_sm"</span>, <span class="st">"pi_sp1"</span>, <span class="st">"pi_sp2"</span><span class="op">)</span></span>
+<span><span class="va">var_egg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Eggs"</span>, <span class="st">"p_Eggs1`"</span>, <span class="st">"J"</span>, <span class="st">"LogRmean"</span>, <span class="st">"egg_juv_surv"</span><span class="op">)</span></span>
+<span><span class="va">var_pop</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Jint"</span>, <span class="st">"PSm"</span>, <span class="st">"post.smolt1"</span>, <span class="st">"post.smolt2"</span>, <span class="co"># Juveniles and smolts</span></span>
+<span>                     <span class="st">"Sm1"</span>, <span class="st">"Parr1"</span>, <span class="st">"Sm2"</span>, <span class="st">"Res1"</span>, <span class="st">"Sm"</span>,</span>
+<span>                     <span class="st">"Sp11"</span>, <span class="st">"Sp12"</span>, <span class="st">"Sp21"</span>, <span class="st">"Sp22"</span>, <span class="st">"Sp1"</span>, <span class="st">"Sp2"</span>, <span class="st">"Sp"</span>, <span class="co"># Spawners</span></span>
+<span>                        <span class="st">"mean_p_Sm1"</span>, <span class="st">"mean_p_Sp1"</span>, <span class="st">"mean_p_Sp11"</span>, <span class="st">"mean_p_Sp12"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">inits1</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span>file <span class="op">=</span> <span class="st">"model_init/SalmonLifeCycle/inits1_SalmonLifeCycle.txt"</span><span class="op">)</span><span class="op">$</span><span class="va">value</span></span>
+<span><span class="va">inits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">inits1</span>, <span class="va">inits1</span>, <span class="va">inits1</span><span class="op">)</span> </span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/jags.model.html" class="external-link">jags.model</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/textconnections.html" class="external-link">textConnection</a></span><span class="op">(</span><span class="va">model_str</span><span class="op">)</span>, </span>
+<span>                    data <span class="op">=</span> <span class="va">data</span>, inits <span class="op">=</span> <span class="va">inits</span>,</span>
+<span>                    n.chains <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co"># Inferences</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">model</span>, n.iter <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
+<span><span class="va">posterior_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/rjags/man/coda.samples.html" class="external-link">coda.samples</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<span>  variable.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"alpha"</span>, <span class="st">"beta"</span>, <span class="st">"sigma_2"</span>, <span class="co"># Production</span></span>
+<span>                     <span class="st">"s01"</span>, <span class="st">"s12"</span>, <span class="st">"ss2"</span>, <span class="st">"ss11"</span>, <span class="st">"ss21"</span>, <span class="co">#Survival rate gamma</span></span>
+<span>                     <span class="st">"theta_Sm1"</span>, <span class="st">"delta_ss1"</span>, <span class="st">"theta_m1"</span>, <span class="co"># Migration rate</span></span>
+<span>                     <span class="st">"pf1"</span>, <span class="st">"pf2"</span>, <span class="co"># Proportion of female</span></span>
+<span>                     <span class="st">"pi_sm"</span>, <span class="st">"pi_sp1"</span>, <span class="st">"pi_sp2"</span>, <span class="co"># Trapping efficiency</span></span>
+<span>                     <span class="st">"Eggs"</span>, <span class="st">"p_Eggs1`"</span>, <span class="st">"J"</span>, <span class="st">"LogRmean"</span>, <span class="st">"egg_juv_surv"</span>,</span>
+<span>                     <span class="st">"Jint"</span>, <span class="st">"PSm"</span>, <span class="st">"post.smolt1"</span>, <span class="st">"post.smolt2"</span>, <span class="co"># Juveniles and smolts</span></span>
+<span>                     <span class="st">"Sm1"</span>, <span class="st">"Parr1"</span>, <span class="st">"Sm2"</span>, <span class="st">"Res1"</span>, <span class="st">"Sm"</span>,</span>
+<span>                     <span class="st">"Sp11"</span>, <span class="st">"Sp12"</span>, <span class="st">"Sp21"</span>, <span class="st">"Sp22"</span>, <span class="st">"Sp1"</span>, <span class="st">"Sp2"</span>, <span class="st">"Sp"</span>, <span class="co"># Spawners</span></span>
+<span>                        <span class="st">"mean_p_Sm1"</span>, <span class="st">"mean_p_Sp1"</span>, <span class="st">"mean_p_Sp11"</span>, <span class="st">"mean_p_Sp12"</span></span>
+<span>                     <span class="op">)</span>,</span>
+<span>                       n.iter <span class="op">=</span> <span class="fl">10000</span>,</span>
+<span>                       thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">posterior_sample</span><span class="op">)</span>,</span>
+<span>                <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">default_convergence_measures</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span><span class="op">-</span><span class="va">variable</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span> <span class="va">name</span>, scales <span class="op">=</span> <span class="st">"free"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="va">plot_theme</span></span>
+<span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span>
+<span><span class="co">#&gt; Warning: Removed 6 rows containing non-finite values (stat_bin).</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-10-1.png" width="700"></p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_df.html" class="external-link">as_draws_df</a></span><span class="op">(</span><span class="va">posterior_sample</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-scatterplots.html" class="external-link">mcmc_pairs</a></span><span class="op">(</span><span class="va">draws</span>, </span>
+<span>           pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s01"</span>, <span class="st">"s12"</span>, <span class="st">"theta_m1"</span>, <span class="st">"delta_ss1"</span>, <span class="st">"sigma_2"</span><span class="op">)</span>,</span>
+<span>           diag_fun <span class="op">=</span> <span class="st">"dens"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-11-1.png" width="700"></p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-scatterplots.html" class="external-link">mcmc_pairs</a></span><span class="op">(</span><span class="va">draws</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"alpha"</span>, <span class="st">"beta"</span><span class="op">)</span>,</span>
+<span>           diag_fun <span class="op">=</span> <span class="st">"dens"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-11-2.png" width="700"></p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://mc-stan.org/bayesplot/reference/MCMC-distributions.html" class="external-link">mcmc_hist</a></span><span class="op">(</span><span class="va">draws</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pi_sp1[1]"</span>, <span class="st">"pi_sp1[2]"</span>, <span class="st">"pi_sp1[3]"</span>,</span>
+<span>                          <span class="st">"pi_sp1[4]"</span>, <span class="st">"pi_sp1[5]"</span>, <span class="st">"pi_sp1[6]"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-11-3.png" width="700"></p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># mcmc_pairs(draws, pars = c("mu_pf1", "mu_pf2"),</span></span>
+<span><span class="co">#            diag_fun = "dens")</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_wider.html">extract_wider</a></span><span class="op">(</span><span class="va">posterior_sample</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">dfl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/extract_longer.html">extract_longer</a></span><span class="op">(</span><span class="va">posterior_sample</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"Sm."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="st">"Smolts (Sm)"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">3000</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1986, 1986+15)),</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1986, 1986+15)) +</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-13-1.png" width="700"></p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"Sp."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="st">"Spawners (Sp)"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1986, 1986+15)),</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1986, 1986+15)) +</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-14-1.png" width="700"></p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"pi_sm."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="st">"Trapping efficiency for Smolts (pi_Sm)"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1984, 1984+17)),</span></span>
+<span>                   <span class="co"># guide = guide_axis(angle = 90),</span></span>
+<span>                   <span class="co"># breaks = seq(1984, 1984+17)) +</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"pi_Sp1."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/bquote.html" class="external-link">bquote</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Trapping efficiency for Spawners : "</span>, <span class="va">pi</span><span class="op">[</span><span class="va">Sp1</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-16-1.png" width="700"></p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1984, 1984+15)),</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1986, 1986+15)) +</span></span>
+<span>  <span class="co"># theme_classic(base_size = 15L)</span></span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"pi_Sp2."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/bquote.html" class="external-link">bquote</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Trapping efficiency for Spawners : "</span>, <span class="va">pi</span><span class="op">[</span><span class="va">Sp2</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-17-1.png" width="700"></p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1984, 1984+15)),</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1986, 1986+15)) +</span></span>
+<span>  <span class="co"># theme_classic(base_size = 15L)</span></span></code></pre></div>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">name_years</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1986</span>, <span class="fl">1986</span><span class="op">+</span><span class="fl">15</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"theta_Sm1."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="st">"Probability to smolitify"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-18-1.png" width="700"></p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span>  <span class="co"># scale_x_discrete(labels = name_years,</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1986, 1986+15)) +</span></span>
+<span>  <span class="co"># theme_classic(base_size = 15L)</span></span></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"ss11."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="st">"1+ Post-smolts survival rate"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-19-1.png" width="700"></p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1984, 1984+17)),</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1984, 1984+17)) +</span></span>
+<span>  <span class="co"># theme_classic(base_size = 15L)</span></span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"Sp11."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="st">"Spawners (Sp11)"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-20-1.png" width="700"></p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1986, 1986+15)),</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1986, 1986+15)) +</span></span>
+<span>  <span class="co"># theme_classic(base_size = 15L)</span></span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dfw</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"Sm1."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>name <span class="op">=</span> <span class="fu"><a href="https://forcats.tidyverse.org/reference/as_factor.html" class="external-link">as_factor</a></span><span class="op">(</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_sub.html" class="external-link">str_sub</a></span><span class="op">(</span><span class="va">name</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">name</span>, y <span class="op">=</span> <span class="va">value</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1985</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_boxplot.html" class="external-link">geom_boxplot</a></span><span class="op">(</span>outlier.shape <span class="op">=</span> <span class="cn">NA</span>, width <span class="op">=</span> <span class="fl">.5</span>, fill <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">xlab</a></span><span class="op">(</span><span class="st">"Years"</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span> <span class="op">(</span><span class="st">"Smolts (Sm1)"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="va">plot_theme</span></span></code></pre></div>
+<p><img src="state-space-modeling-of-a-salmon-life-cycle-model_files/figure-html/unnamed-chunk-21-1.png" width="700"></p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span>  <span class="co"># scale_x_discrete(labels = as.character(seq(1986, 1986+15)),</span></span>
+<span>  <span class="co">#                  guide = guide_axis(angle = 90),</span></span>
+<span>  <span class="co">#                  breaks = seq(1986, 1986+15)) +</span></span>
+<span>  <span class="co"># theme_classic(base_size = 15L)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-hbm4eco" class="csl-entry">
+Parent, E., and E. Prévost. 2013. <em>Introduction to Hierarchical
+Bayesian Modeling for Ecological Data</em>. CRC press Boca Raton,
+Florida.
+</div>
+<div id="ref-RivotPrevostParent04" class="csl-entry">
+Rivot, E., E. Prévost, E. Parent, and J. L. Baglinière. 2004. <span>“A
+<span>B</span>ayesian State-Space Modelling Framework for Fitting a
+Salmon Stage-Structured Population Dynamic Model to Multiple Time Series
+of Field Data.”</span> <em>Ecological Modelling</em> 179: 463–85.
+</div>
+</div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 
@@ -90,7 +1681,7 @@
 
 <div class="pkgdown-footer-right">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.5.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
     </footer>

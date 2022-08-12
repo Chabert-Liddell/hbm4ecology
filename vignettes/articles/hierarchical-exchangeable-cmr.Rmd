@@ -67,7 +67,7 @@ recaptured fish, respectively.
 
 <center>
 
-![Figure 2 -- Schame of the Cerisel trapping facility (Oir river, Normandy, France) working as a double downstream (for smolt runs) and upstream (for spawner runs) partial counting fence. The black circles at the top of the figure indicates the release site of tagged smolts and spawners. The release site and the downstream trap are 1 km away from each other.](figures/CmrOir/CeriselTrap.png){width=80% height=80%}
+![Figure 2 -- Scheme of the Cerisel trapping facility (Oir river, Normandy, France) working as a double downstream (for smolt runs) and upstream (for spawner runs) partial counting fence. The black circles at the top of the figure indicates the release site of tagged smolts and spawners. The release site and the downstream trap are 1 km away from each other.](figures/CmrOir/CeriselTrap.png){width=80% height=80%}
 
 </center>
 

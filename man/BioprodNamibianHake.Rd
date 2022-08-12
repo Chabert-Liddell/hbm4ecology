@@ -20,6 +20,7 @@ McAllister, M. K., & Kirkwood, G. P. (1998). Bayesian stock assessment: a review
 BioprodNamibianHake
 }
 \description{
-A dataset containing the biomass and abundance indices from 1964 to 1988
+A dataset containing the biomass and abundance indices from
+1964 to 1988.
 }
 \keyword{datasets}

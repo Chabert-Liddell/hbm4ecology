@@ -21,9 +21,10 @@ library(rstan)
 library(posterior)
 library(tidyverse)
 #plot_theme <- theme_set(theme_classic(base_size = 15L))
-plot_theme <-  theme_classic(base_size = 15L) + theme(axis.text.x =  element_text(angle = 90),
-                                  strip.background = element_rect(fill = "#4da598"),
-                                  strip.text = element_text(size = 15))
+plot_theme <-  theme_classic(base_size = 15L) + 
+  theme(axis.text.x =  element_text(angle = 90),
+        strip.background = element_rect(fill = "#4da598"),
+        strip.text = element_text(size = 15))
 ```
 
 
