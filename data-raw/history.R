@@ -47,13 +47,14 @@ pkgdown::build_favicons()
 # usethis::use_article(name = "hierarchical-succesive-removal-with-habitat-and-time-covariates",
 #                      title = "Hierarchical Model for Successive Removal Data
 #                      with Habitat and Time Covariates")
-
+usethis::use_article(name = "stan-jags-performance-comparaison-for-hbmforecology",
+                     title = "Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data")
 #pkgdown::build_article("articles/namibian-hake-biomass-production")
 #pkgdown::build_article("articles/hierarchical-stock-recruitment")
 #pkgdown::build_article("articles/hierarchical-exchangeable-cmr")
 #pkgdown::build_article("articles/hierarchical-succesive-removal-with-habitat-and-time-covariates")
 #pkgdown::build_article("articles/hierarchical-successive-removal")
-pkgdown::build_article("articles/state-space-modeling-of-a-salmon-life-cycle-model")
+#pkgdown::build_article("articles/state-space-modeling-of-a-salmon-life-cycle-model")
 pkgdown::build_articles()
 pkgdown::preview_site()
 

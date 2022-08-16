@@ -1,0 +1,690 @@
+---
+title: "Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(hbm4ecology)
+library(rstan)
+library(tidyverse)
+library(GGally)
+library(posterior)
+library(bayesplot)
+library(shinystan)
+library(rjags)
+```
+
+In this article we are going to compare the performance of the Hamiltonian Monte Carlo using `rstan` and the Monte Carlo Markov Chain using `rjags` on the biomass production model and the hierarchical stock-recruitment model.
+
+```{r}
+data("BioprodNamibianHake")
+data("SRSalmon")
+```
+
+
+# Biomass Production Model
+
+```{r stan-model}
+stan_model_biomprod <- "
+data {
+  int N;
+  int Year[N];
+  vector<lower=0>[N] C;
+  vector<lower=0>[N-1] I;
+  int NF;
+}
+
+parameters {
+  real<lower=0> r;
+  real<lower=100, upper=15000> K;
+  real<lower=-20, upper=20> log_q;
+  real<lower=-20, upper=20> log_sig2;
+  vector<lower=0>[N] P; //B_t/K
+}
+
+transformed parameters {
+  real q;
+  real sig;
+  vector<lower=0>[N] B;
+  
+  q = exp(log_q);
+  sig = sqrt(exp(log_sig2));
+  B = K*P;
+}
+
+model {
+  vector[N-1] h_P;
+
+  P[1] ~ lognormal(0, sig);
+  for (t in 1:(N-1)) {
+      h_P[t] = r * K * P[t] * (1 - P[t]);
+      P[t+1] ~ lognormal(log(P[t] + h_P[t]/K - C[t]/K), sig);
+      I[t] ~ lognormal(log(q*K*P[t+1]), sig);
+  }
+}
+
+generated quantities {
+  // Abundance prediction
+  vector[N] I_pred;
+
+  for (t in 1:N) {
+    I_pred[t] = lognormal_rng(log(q*K*P[t]), sig);
+  }
+} 
+
+"
+```
+
+```{r data}
+dat_list <- BioprodNamibianHake
+dat_list$I <- BioprodNamibianHake$I[2:25]
+dat_list$NF <- 5
+```
+
+```{r fit-model, cache=TRUE}
+model_name <-"BiomProd_NamibianHake"
+t0 <- Sys.time()
+sm_hier <- stan_model(model_code =  stan_model_biomprod,
+                 model_name =  model_name, )
+t1 <- Sys.time()
+
+
+
+t2 <- Sys.time()
+fit_hier <- sampling(object = sm_hier,
+                data = dat_list, 
+                pars = NA, #params,
+                chains = 1,
+    #            init = lapply(seq(4), function(x)
+    #               list(P = rep(.5, 25))),
+                iter = 1e5, 
+                warmup = 1e4, 
+                thin = 1#,
+#                control = list("adapt_delta" = .9)
+)
+t3 <- Sys.time()
+```
+
+```{r}
+#monitor(rstan::extract(fit_hier, pars = c("r", "q", "sig"), permuted = FALSE, inc_warmup = TRUE))
+#print(fit_hier, pars =  c("r", "q", "sig", "P"))
+
+```
+
+```{r}
+biomprod_jags_model_str <-  
+"model {
+
+# Constants
+# --------------------------------------------------
+
+# Constant needed to prevent Biomass to be negative
+eps <- 0.001
+
+# Biomass(t=1) = alpha * K
+alpha <- 1 
+
+
+# Prior 
+# ---------------------------------------------------
+
+log_q ~ dunif(-20,20) 
+q <- exp(log_q) 
+
+r ~ dunif(0.01,3)
+r_p ~ dunif(0.01,3)
+
+K ~ dunif(100,15000) 
+K_p ~ dunif(100,15000) 
+
+# Process error variance
+
+log_sigma2p ~ dunif(-20,20)
+sigma2p <- exp(log_sigma2p) 
+taup <- 1/sigma2p
+
+# Measurement error variance
+
+sigma2obs <- sigma2p
+tauobs <- 1/sigma2obs
+
+
+# Process equation on the latent variable B(t)
+# Parameterized in term of P[t] = B[t] / K 
+# to improve mixing (See Meyer and Millar 1999)
+# ---------------------------------------------------
+
+# Biomass first year (Mean biomass = K)
+Pm[1] <- alpha
+
+for (t in 1:((N)-1))
+{
+Pm[t+1] <-
+# Logistic (Schaefer form)
+   max( (P[t] + r*P[t]*(1 - P[t]) - C[t]/K ), eps)
+}
+
+
+# Process error
+
+for (t in 1:(N))
+{
+logPm[t] <- log(Pm[t]) 
+P[t] ~ dlnorm(logPm[t],taup)
+} 
+
+
+# Biomass
+
+for (t in 1:(N))  {  
+  B[t] <- P[t]*K  
+}
+
+
+# Observation equation
+# (abundance indices are available up to N)
+# ---------------------------------------------------
+
+for (t in 1:N) 
+{
+Im[t] <- q*B[t]
+logIm[t] <- log(Im[t])
+I[t] ~ dlnorm(logIm[t],tauobs)
+} 
+
+
+# Predicted abundance indices
+# (to check the fit osf the model to the data)
+# ---------------------------------------------------
+
+for (t in 1:N) 
+{
+logIm_pred[t] <- log(q*B[t])
+I_pred[t] ~ dlnorm(logIm_pred[t],tauobs)
+} 
+
+
+} # End model"
+```
+
+```{r bioprod-fit-jags, cache=TRUE}
+t0j <- Sys.time()
+biomprod_jags_model <- jags.model(file = textConnection(biomprod_jags_model_str), 
+                    data = BioprodNamibianHake,
+                    n.chains = 1)
+t1j <- Sys.time()
+# Inferences
+t2j <- Sys.time()
+update(biomprod_jags_model, n.iter = 10000)
+t3j <- Sys.time()
+
+t4j <- Sys.time()
+posterior_sample <- jags.samples(
+  model = biomprod_jags_model,
+  variable.names = c("r", "q", "sigma2p", "B",  "I_pred"),
+                       n.iter = 90000,
+                       thin = 1)
+t5j <- Sys.time()
+```
+
+```{r}
+samples <- cbind( matrix( posterior_sample$q[1,,1], ncol=1 ),
+                  matrix( posterior_sample$r[1,,1], ncol=1 ),
+                  matrix( posterior_sample$sigma2p[1,,1], ncol=1 ) )
+colnames( samples ) <- c( "q", "r", "sig" )
+shinystan.obj <- as.shinystan( list( samples ) )
+# retrieve effective sample size (ESS)
+( ESS <- retrieve( shinystan.obj, "ess" ) )
+ESS/as.numeric(difftime(t5j, t0j, units = "secs"))
+ESS/as.numeric(difftime(t5j, t2j, units = "secs"))
+ESS/as.numeric(difftime(t5j, t4j, units = "secs"))
+
+```
+
+```{r}
+
+shinystan.obj.stan <- as.shinystan(fit_hier)
+# retrieve effective sample size (ESS)
+( ESS.stan <- retrieve( shinystan.obj.stan, "ess", pars = c("r", "q", "sig") ))
+ESS.stan/as.numeric(difftime(t3, t0, units = "secs"))
+ESS.stan/as.numeric(difftime(t3, t2, units = "secs"))
+ESS.stan/get_elapsed_time(fit_hier)[,2]
+```
+
+# Stock-Recruitment models
+
+## Independent model
+
+```{r gamma-model}
+hsr_model_indep_S_gamma_stan <- "
+data {
+  int n_riv; // Number of rivers
+  int n_obs[n_riv]; // Number of observations by rivers
+  int n; // Total number of observations
+  int riv[n]; // River membership (indices k)
+  vector[n] S; // Stock data
+  vector[n] R; // Recruitment data
+}
+
+parameters {
+  vector<lower=0, upper=200>[n_riv] Sopt;
+  vector<lower=0, upper=1>[n_riv] hopt;
+  real<lower=0> tau;
+}
+
+transformed parameters {
+  vector<lower=0>[n_riv] alpha;
+  vector<lower=0>[n_riv] beta ;
+  real<lower=0> sigma;
+  // real Copt;
+  // real Ropt;
+  vector[n] LogR;
+  // real Slope;
+  
+  for (k in 1:n_riv) {
+    alpha[k] = exp(hopt[k])/(1-hopt[k]) ;  
+    beta[k] = hopt[k]/Sopt[k]     ;    
+  }
+  sigma = tau^-0.5        ;  
+  // Copt = hopt*Sopt/(1-hopt);
+  // Ropt = Sopt + Copt;
+  // Slope = exp(alpha);
+  for (t in 1:n) {
+    LogR[t] = log(S[t]) + log(alpha[riv[t]]) - beta[riv[t]]*S[t] ;  // LogR[t] is the logarithm of the Ricker function  
+  }
+}
+
+model {
+  tau ~ gamma(.001, .001) ; // Diffuse prior for the variance
+  for (k in 1:n_riv) {
+    hopt[k] ~ beta(1,1) ;   
+    Sopt[k] ~ gamma(1, 1./1600) ;
+  }
+// 
+    log(R) ~ normal(LogR, sigma) ;
+}
+"
+```
+
+```{r gamma-compil, cache = TRUE, message=FALSE}
+t0s <- Sys.time()
+model_name <-"HSR_Ricker_LogN_Management_S_gamma"
+sm <- stan_model(model_code =  hsr_model_indep_S_gamma_stan,
+                 model_name =  model_name
+)
+t1s <- Sys.time()
+```
+
+
+```{r gamma-fit, cache = TRUE}
+set.seed(1234)
+# Number iteration for the "warm up" phase
+n_warm <- 10000
+# Number iteration for inferences
+n_iter <- 100000
+n_thin <- 1
+# Number of chains
+n_chains <- 1
+
+params<-c("Sopt","hopt","tau")
+# Inferences
+
+t2s <- Sys.time()
+fit <- sampling(object = sm,
+                data = SRSalmon, 
+                pars = c("Sopt","hopt","tau"), #params,
+                chains = n_chains, 
+                iter = n_iter, 
+                warmup = n_warm, 
+                thin = n_thin # Acceptance rate up from .8 to remove some divergent transitions
+)
+t3s <- Sys.time()
+```
+
+```{r}
+stan_indfit_sso <- as.shinystan(fit)
+ESS.stan <- stan_indfit_sso@summary[-28, "n_eff"]
+#( ESS.stan <- retrieve( stan_indfit_sso, "ess", pars = c("Sopt", "hopt", "tau") ))
+ESS.stan/get_elapsed_time(fit)[,2]
+ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs"))
+ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs"))
+```
+
+
+```{r}
+ind_stockrec_model <- "model
+{
+
+# Prior 
+
+# Precision of the recruitment process
+# Very small values of parameters
+
+	tau ~ dgamma(0.001,0.001)
+	sigma <- sqrt(1/tau)
+
+# Gamma distribution for Sst
+	
+	E.Sst <- 40 
+	CV.Sst <- 1 
+	a <- 1/(CV.Sst*CV.Sst)
+	b <- (1/(CV.Sst*CV.Sst))*(1/E.Sst)
+
+# Priors for the n.riv rivers
+
+for( r in 1 : n_riv )
+{
+
+# dummy
+	n_obs_riv[r] <- n_obs[r]
+
+# Beta distribution for hst 
+  	hst[r] ~ dbeta(1, 1)
+
+# Gamma distribution for Sst
+	# Sst[r] ~ dunif(1,200)
+	Sst[r] ~ dgamma(a,b)I(,200)
+
+}  # end loop on rivers (priors)
+
+
+# Likelihood
+# Recruitment process
+# Ricker equation with lognormal process errors
+# Management parameters (Schnute and Kronlund, 1996. CJFAS, 53:1281-1293)
+
+# Mean R with parameterization (hst,Sst)
+# Sst = stock at MSY	
+# Cst = MSY
+# Ropt = recruitment at MSY
+# hst  = exploitation rate at MSY = Cst/Ropt
+# tau = precision of process errors (1/variance)
+
+for( i in 1 : n )
+{
+
+log.R[i] <-  log(S[i]) + hst[riv[i]] - log(1-hst[riv[i]]) - (hst[riv[i]]/Sst[riv[i]]) *S[i]
+R[i] ~ dlnorm(log.R[i], tau)
+}  # end loop on years
+
+}  # end model"
+```
+
+```{r indSR-fit-jags, cache=TRUE}
+t0j <- Sys.time()
+ind_stockrec_jags_model <- jags.model(file = textConnection(ind_stockrec_model), 
+                    data = SRSalmon,
+                    n.chains = 1)
+t1j <- Sys.time()
+# Inferences
+t2j <- Sys.time()
+update(ind_stockrec_jags_model, n.iter = 10000)
+t3j <- Sys.time()
+
+t4j <- Sys.time()
+posterior_sample <- jags.samples(
+  model = ind_stockrec_jags_model,
+  variable.names = c("hst", "Sst", "tau"),
+                       n.iter = 9e4,
+                       thin = 1)
+t5j <- Sys.time()
+```
+
+```{r}
+# summarise_draws(as_draws_df(posterior_sample),
+#                 default_convergence_measures()) %>% 
+#   filter(variable %in% c("r", "q", "sigma2p"))
+
+# posterior_sample$q[1,,1]
+
+# create shinystan object
+samples <- cbind( matrix( posterior_sample$tau[1,,1], ncol=1 ),
+                  matrix( posterior_sample$hst[1:13,,1], ncol=13 ),
+                  matrix( posterior_sample$Sst[1:13,,1], ncol=13 ) )
+#dfw <- extract_wider(posterior_sample)
+colnames( samples ) <- c("tau", paste0("hopt.", seq(13)), paste0("Sopt.", seq(13)))
+shinystan.obj <- as.shinystan( list( samples ) )
+# retrieve effective sample size (ESS)
+( ESS <- retrieve( shinystan.obj, "ess" ) )
+ESS/as.numeric(difftime(t5j, t0j, units = "secs"))
+ESS/as.numeric(difftime(t5j, t2j, units = "secs"))
+ESS/as.numeric(difftime(t5j, t4j, units = "secs"))
+
+```
+
+## Hierarchical model with latitude covariates
+```{r}
+hsr_model_hier_S_gamma_stan <- "
+data {
+  int n_riv; // Number of rivers
+  int n_obs[n_riv]; // Number of observations by rivers
+  int n; // Total number of observations
+  int riv[n]; // River membership (indices k)
+  vector<lower=0>[n] S; // Stock data
+  vector<lower=0>[n] R; // Recruitment data
+  vector[n_riv] lat; //Latitude of rivers
+  int n_pred;
+  vector[n_pred] lat_pred;
+}
+
+transformed data {
+  vector[n_riv] lat_rescaled;
+  lat_rescaled = lat-mean(lat);
+}
+
+parameters {
+  real<lower=0> tau;
+
+  real<lower=0, upper=20> CV_S;
+  real<lower=-5, upper=5> alpha;
+  real<lower=-50, upper=50> beta;
+  vector<lower=0, upper=200>[n_riv] Sopt;  
+  
+  
+  real<lower=-5, upper=5> delta;
+  real<lower=-50, upper=50> kappa;
+  real<lower=0> tau_h;
+  vector[n_riv] logit_h;
+
+}
+
+transformed parameters {
+  
+  real<lower=0> sigma;      // stdev for lognormal noise
+  vector<lower=0>[n_riv] mu_S; // Expected mean of Sopt  
+  real<lower=0> a; // parameters of the gamma prior of Sopt
+  vector<lower=0>[n_riv] b; // parameters of the gamma prior of Sopt
+  
+  real<lower=0> sigma_h; // stdev for logit of h 
+  vector[n_riv] logit_mu_h; // logit of the expected mean of hopt
+  vector<lower=0, upper=1>[n_riv] hopt; 
+  vector[n] LogR;
+  
+  
+
+  sigma = tau^-0.5  ;
+  sigma_h = tau_h^-0.5 ;
+
+  for (k in 1:n_riv) {
+    mu_S[k] = exp(alpha * (lat[k]) + beta) ;
+    logit_mu_h[k] = delta * (lat[k]) + kappa ;
+  }
+  
+  a = 1/square(CV_S) ;
+  for (k in 1:n_riv) {
+    b[k] = 1/(mu_S[k]*square(CV_S)) ;
+  }  
+  hopt = inv_logit(logit_h) ;
+
+
+  for (t in 1:n) {
+    LogR[t] = hopt[riv[t]] + log(S[t]) - log(1 - hopt[riv[t]]) - hopt[riv[t]]/Sopt[riv[t]]*S[t] ;  // LogR[t] is the logarithm of the Ricker function  
+  }
+}
+
+model {
+  tau ~ gamma(.001, .001) ; // Diffuse prior for the precision
+  tau_h ~ gamma(.001, .001) ; // Diffuse prior for the precision
+
+  for (k in 1:n_riv) {
+    logit_h[k] ~ normal(logit_mu_h[k], sigma_h);
+    Sopt[k] ~ gamma(a, b[k]) ; // T[0,200] ;
+  }
+
+  
+  log(R) ~ normal(LogR, sigma) ;
+}
+
+"
+```
+
+
+```{r}
+hier_stockrec_model <- "
+model
+{
+
+# Prior 
+
+# Precision of the recruitment process
+# Gamma distribution with very small parameters
+
+	tau ~ dgamma(0.001,0.001)
+	sigma <- sqrt(1/tau)
+
+# Prior for the regression with latitude
+	
+# Prior for the parameters of the regression on Sst = f(Latitude)
+	alpha ~ dunif(-5, 5)
+	B2 ~ dunif(-50, 50)
+	beta <- B2 - alpha*mean(lat[])
+	CV.Sst ~ dunif(0,20)
+
+# Prior for the parameters of the regression on h = f(Latitude)
+	delta ~ dunif(-5, 5)
+	D2 ~ dunif(-50, 50)
+	kappa <- D2 - delta*mean(lat[])
+	tau.h ~ dgamma(0.001,0.001)
+	sigma.h <- sqrt(1/tau.h)
+
+# Priors for the n.riv rivers
+	
+for( r in 1 : n_riv )
+{
+
+# dummy
+ 	n_obs_riv[r] <- n_obs[r]
+
+# Sst (hierarchical)
+	log.ESst[r] <- alpha * (lat[r]-mean(lat[])) + B2 
+	ESst[r] <- exp(log.ESst[r])
+	a[r] <- 1/(CV.Sst*CV.Sst)
+	b[r] <- (1/(CV.Sst*CV.Sst))*(1/ESst[r])
+	Sst[r] ~ dgamma(a[r],b[r])T(,200)
+	
+# hst (hierarchical)
+	logitEhst[r] <- delta * (lat[r]-mean(lat[])) + D2 
+	logit(hst[r]) <- logithst[r] 
+	logithst[r] ~ dnorm(logitEhst[r],tau.h)
+
+} # end loop on rivers (priors)
+
+
+# Likelihood
+# Recruitment process
+# Ricker equation with lognormal process errors
+
+for( i in 1 : n )
+{
+log.R[i] <-  log(S[i]) + hst[riv[i]] - log(1-hst[riv[i]]) - (hst[riv[i]]/Sst[riv[i]]) *S[i]
+R[i] ~ dlnorm(log.R[i], tau)
+}
+		
+}  # end model"
+```
+
+```{r stan-hier-compil, cache = TRUE, message=FALSE}
+t0s <- Sys.time()
+model_name <-"hierarchical-stock-recruitment"
+sm <- stan_model(model_code =  hsr_model_hier_S_gamma_stan,
+                 model_name =  model_name
+)
+t1s <- Sys.time()
+```
+
+
+```{r stan-hier-fit, cache = TRUE}
+set.seed(1234)
+# Number iteration for the "warm up" phase
+n_warm <- 10000
+# Number iteration for inferences
+n_iter <- 100000
+n_thin <- 1
+# Number of chains
+n_chains <- 1
+
+params<-c("Sopt","hopt","tau")
+# Inferences
+
+t2s <- Sys.time()
+fit <- sampling(object = sm,
+                data = SRSalmon, 
+                pars = c("Sopt","hopt","tau"), #params,
+                chains = n_chains, 
+                iter = n_iter, 
+                warmup = n_warm, 
+                thin = n_thin # Acceptance rate up from .8 to remove some divergent transitions
+)
+t3s <- Sys.time()
+```
+
+```{r}
+stan_hierfit_sso <- as.shinystan(fit)
+ESS.stan <- stan_hierfit_sso@summary[-28, "n_eff"]
+#( ESS.stan <- retrieve( stan_hierfit_sso, "ess", pars = c("Sopt", "hopt", "tau") ))
+ESS.stan/get_elapsed_time(fit)[,2]
+ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs"))
+ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs"))
+```
+
+
+```{r hierSR-fit-jags, cache=TRUE}
+t0j <- Sys.time()
+hier_stockrec_jags_model <- jags.model(file = textConnection(hier_stockrec_model), 
+                    data = SRSalmon,
+                    n.chains = 1)
+t1j <- Sys.time()
+# Inferences
+t2j <- Sys.time()
+update(hier_stockrec_jags_model, n.iter = 10000)
+t3j <- Sys.time()
+
+t4j <- Sys.time()
+posterior_sample <- jags.samples(
+  model = hier_stockrec_jags_model,
+  variable.names = c("hst", "Sst", "tau"),
+                       n.iter = 9e4,
+                       thin = 1)
+t5j <- Sys.time()
+```
+
+```{r}
+samples <- cbind( matrix( posterior_sample$tau[1,,1], ncol=1 ),
+                  matrix( posterior_sample$hst[1:13,,1], ncol=13 ),
+                  matrix( posterior_sample$Sst[1:13,,1], ncol=13 ) )
+
+colnames( samples ) <- c("tau", paste0("hopt.", seq(13)), paste0("Sopt.", seq(13)))
+shinystan.obj <- as.shinystan( list( samples ) )
+
+( ESS <- retrieve( shinystan.obj, "ess" ) )
+ESS/as.numeric(difftime(t5j, t0j, units = "secs"))
+ESS/as.numeric(difftime(t5j, t2j, units = "secs"))
+ESS/as.numeric(difftime(t5j, t4j, units = "secs"))
+
+```
