@@ -46,6 +46,7 @@ parameters {
   real<lower=-20, upper=20> log_q;
   real<lower=-20, upper=20> log_sig2;
   vector<lower=0>[N] P; //B_t/K
+  real<lower=0> I1;
 }
 
 transformed parameters {
@@ -59,20 +60,24 @@ transformed parameters {
 }
 
 model {
-  vector[N-1] h_P;
+  vector[N] h_P;
 
   P[1] ~ lognormal(0, sig);
-  for (t in 1:(N-1)) {
-      h_P[t] = r * K * P[t] * (1 - P[t]);
-      P[t+1] ~ lognormal(log(P[t] + h_P[t]/K - C[t]/K), sig);
-      I[t] ~ lognormal(log(q*K*P[t+1]), sig);
-  }
+  I1 ~ lognormal(log(q*K*P[1]), sig);
+  h_P = r * K * P .* (1-P);
+  P[2:N] ~ lognormal(log(P[1:(N-1)] + h_P[1:(N-1)]/K - C[1:(N-1)]/K), sig);
+  I ~ lognormal(log(q*K*P[2:N]), sig);
+//  for (t in 1:(N-1)) {
+//      h_P[t] = r * K * P[t] * (1 - P[t]);
+//      P[t+1] ~ lognormal(log(P[t] + h_P[t]/K - C[t]/K), sig);
+//      I[t] ~ lognormal(log(q*K*P[t+1]), sig);
+//  }
 }
 
 generated quantities {
   // Abundance prediction
   vector[N] I_pred;
-
+  
   for (t in 1:N) {
     I_pred[t] = lognormal_rng(log(q*K*P[t]), sig);
   }
@@ -130,7 +135,6 @@ eps <- 0.001
 # Biomass(t=1) = alpha * K
 alpha <- 1 
 
-
 # Prior 
 # ---------------------------------------------------
 
@@ -138,10 +142,7 @@ log_q ~ dunif(-20,20)
 q <- exp(log_q) 
 
 r ~ dunif(0.01,3)
-r_p ~ dunif(0.01,3)
-
 K ~ dunif(100,15000) 
-K_p ~ dunif(100,15000) 
 
 # Process error variance
 
@@ -151,8 +152,8 @@ taup <- 1/sigma2p
 
 # Measurement error variance
 
-sigma2obs <- sigma2p
-tauobs <- 1/sigma2obs
+#sigma2obs <- sigma2p
+#tauobs <- 1/sigma2obs
 
 
 # Process equation on the latent variable B(t)
@@ -163,25 +164,18 @@ tauobs <- 1/sigma2obs
 # Biomass first year (Mean biomass = K)
 Pm[1] <- alpha
 
-for (t in 1:((N)-1))
-{
-Pm[t+1] <-
-# Logistic (Schaefer form)
-   max( (P[t] + r*P[t]*(1 - P[t]) - C[t]/K ), eps)
+for (t in 1:((N)-1)) {
+  Pm[t+1] <- max( (P[t] + r*P[t]*(1 - P[t]) - C[t]/K ), eps)
 }
-
 
 # Process error
 
-for (t in 1:(N))
-{
-logPm[t] <- log(Pm[t]) 
-P[t] ~ dlnorm(logPm[t],taup)
+for (t in 1:N) {
+  logPm[t] <- log(Pm[t]) 
+  P[t] ~ dlnorm(logPm[t],taup)
 } 
 
-
 # Biomass
-
 for (t in 1:(N))  {  
   B[t] <- P[t]*K  
 }
@@ -191,11 +185,10 @@ for (t in 1:(N))  {
 # (abundance indices are available up to N)
 # ---------------------------------------------------
 
-for (t in 1:N) 
-{
-Im[t] <- q*B[t]
-logIm[t] <- log(Im[t])
-I[t] ~ dlnorm(logIm[t],tauobs)
+for (t in 1:N) {
+  Im[t] <- q*B[t]
+  logIm[t] <- log(Im[t])
+  I[t] ~ dlnorm(logIm[t],taup)
 } 
 
 
@@ -203,15 +196,17 @@ I[t] ~ dlnorm(logIm[t],tauobs)
 # (to check the fit osf the model to the data)
 # ---------------------------------------------------
 
-for (t in 1:N) 
-{
-logIm_pred[t] <- log(q*B[t])
-I_pred[t] ~ dlnorm(logIm_pred[t],tauobs)
+for (t in 1:N) {
+  logIm_pred[t] <- log(q*B[t])
+  I_pred[t] ~ dlnorm(logIm_pred[t],taup)
 } 
-
-
 } # End model"
 ```
+
+```{r}
+results <- list()
+```
+
 
 ```{r bioprod-fit-jags, cache=TRUE}
 t0j <- Sys.time()
@@ -241,10 +236,14 @@ colnames( samples ) <- c( "q", "r", "sig" )
 shinystan.obj <- as.shinystan( list( samples ) )
 # retrieve effective sample size (ESS)
 ( ESS <- retrieve( shinystan.obj, "ess" ) )
+
+
 ESS/as.numeric(difftime(t5j, t0j, units = "secs"))
 ESS/as.numeric(difftime(t5j, t2j, units = "secs"))
 ESS/as.numeric(difftime(t5j, t4j, units = "secs"))
-
+results$bioprod$jags <- list(ESS/as.numeric(difftime(t5j, t0j, units = "secs")),
+                          ESS/as.numeric(difftime(t5j, t2j, units = "secs")),
+                          ESS/as.numeric(difftime(t5j, t4j, units = "secs")))
 ```
 
 ```{r}
@@ -255,6 +254,9 @@ shinystan.obj.stan <- as.shinystan(fit_hier)
 ESS.stan/as.numeric(difftime(t3, t0, units = "secs"))
 ESS.stan/as.numeric(difftime(t3, t2, units = "secs"))
 ESS.stan/get_elapsed_time(fit_hier)[,2]
+results$bioprod$stan <- list(ESS.stan/as.numeric(difftime(t3, t0, units = "secs")),
+                          ESS.stan/as.numeric(difftime(t3, t2, units = "secs")),
+                          ESS.stan/get_elapsed_time(fit_hier)[,2])
 ```
 
 # Stock-Recruitment models
@@ -282,19 +284,13 @@ transformed parameters {
   vector<lower=0>[n_riv] alpha;
   vector<lower=0>[n_riv] beta ;
   real<lower=0> sigma;
-  // real Copt;
-  // real Ropt;
   vector[n] LogR;
-  // real Slope;
   
   for (k in 1:n_riv) {
     alpha[k] = exp(hopt[k])/(1-hopt[k]) ;  
     beta[k] = hopt[k]/Sopt[k]     ;    
   }
   sigma = tau^-0.5        ;  
-  // Copt = hopt*Sopt/(1-hopt);
-  // Ropt = Sopt + Copt;
-  // Slope = exp(alpha);
   for (t in 1:n) {
     LogR[t] = log(S[t]) + log(alpha[riv[t]]) - beta[riv[t]]*S[t] ;  // LogR[t] is the logarithm of the Ricker function  
   }
@@ -302,11 +298,12 @@ transformed parameters {
 
 model {
   tau ~ gamma(.001, .001) ; // Diffuse prior for the variance
-  for (k in 1:n_riv) {
-    hopt[k] ~ beta(1,1) ;   
-    Sopt[k] ~ gamma(1, 1./1600) ;
-  }
-// 
+  hopt ~ beta(1,1);
+  Sopt ~ gamma(1, 1./1600);
+//  for (k in 1:n_riv) {
+//    hopt[k] ~ beta(1,1) ;   
+//    Sopt[k] ~ gamma(1, 1./1600) ;
+//  }
     log(R) ~ normal(LogR, sigma) ;
 }
 "
@@ -354,6 +351,9 @@ ESS.stan <- stan_indfit_sso@summary[-28, "n_eff"]
 ESS.stan/get_elapsed_time(fit)[,2]
 ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs"))
 ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs"))
+results$indstockrec$jags <- list(ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs")),
+                          ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs")),
+                          ESS.stan/get_elapsed_time(fit)[,2])
 ```
 
 
@@ -455,7 +455,9 @@ shinystan.obj <- as.shinystan( list( samples ) )
 ESS/as.numeric(difftime(t5j, t0j, units = "secs"))
 ESS/as.numeric(difftime(t5j, t2j, units = "secs"))
 ESS/as.numeric(difftime(t5j, t4j, units = "secs"))
-
+results$indstockrec$jags <- list(ESS/as.numeric(difftime(t5j, t0j, units = "secs")),
+                          ESS/as.numeric(difftime(t5j, t2j, units = "secs")),
+                          ESS/as.numeric(difftime(t5j, t4j, units = "secs")))
 ```
 
 ## Hierarchical model with latitude covariates
@@ -469,8 +471,8 @@ data {
   vector<lower=0>[n] S; // Stock data
   vector<lower=0>[n] R; // Recruitment data
   vector[n_riv] lat; //Latitude of rivers
-  int n_pred;
-  vector[n_pred] lat_pred;
+//  int n_pred;
+//  vector[n_pred] lat_pred;
 }
 
 transformed data {
@@ -511,10 +513,12 @@ transformed parameters {
   sigma = tau^-0.5  ;
   sigma_h = tau_h^-0.5 ;
 
-  for (k in 1:n_riv) {
-    mu_S[k] = exp(alpha * (lat[k]) + beta) ;
-    logit_mu_h[k] = delta * (lat[k]) + kappa ;
-  }
+    mu_S = exp(alpha * (lat) + beta) ;
+    logit_mu_h = delta * (lat) + kappa ;  
+//  for (k in 1:n_riv) {
+//    mu_S[k] = exp(alpha * (lat[k]) + beta) ;
+//    logit_mu_h[k] = delta * (lat[k]) + kappa ;
+//  }
   
   a = 1/square(CV_S) ;
   for (k in 1:n_riv) {
@@ -651,6 +655,9 @@ ESS.stan <- stan_hierfit_sso@summary[-28, "n_eff"]
 ESS.stan/get_elapsed_time(fit)[,2]
 ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs"))
 ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs"))
+results$hierstockrec$stan <- list(ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs")),
+                          ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs")),
+                          ESS.stan/get_elapsed_time(fit)[,2])
 ```
 
 
@@ -686,5 +693,12 @@ shinystan.obj <- as.shinystan( list( samples ) )
 ESS/as.numeric(difftime(t5j, t0j, units = "secs"))
 ESS/as.numeric(difftime(t5j, t2j, units = "secs"))
 ESS/as.numeric(difftime(t5j, t4j, units = "secs"))
-
+results$hierstockrec$jags <- list(ESS/as.numeric(difftime(t5j, t0j, units = "secs")),
+                          ESS/as.numeric(difftime(t5j, t2j, units = "secs")),
+                          ESS/as.numeric(difftime(t5j, t4j, units = "secs")))
 ```
+
+```{r echo=FALSE}
+saveRDS(results, file = "results_comp")
+```
+
