@@ -4,7 +4,7 @@ template:
   bslib:
     bg: "#FFFFFF"
     fg: "#000000"
-    primary: "#4da598"
+    primary: "#618288"
 navbar:
   bg: primary
   structure:

@@ -47,8 +47,8 @@ pkgdown::build_favicons()
 # usethis::use_article(name = "hierarchical-succesive-removal-with-habitat-and-time-covariates",
 #                      title = "Hierarchical Model for Successive Removal Data
 #                      with Habitat and Time Covariates")
-usethis::use_article(name = "stan-jags-performance-comparaison-for-hbmforecology",
-                     title = "Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data")
+#usethis::use_article(name = "stan-jags-performance-comparaison-for-hbmforecology",
+#                     title = "Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data")
 #pkgdown::build_article("articles/namibian-hake-biomass-production")
 #pkgdown::build_article("articles/hierarchical-stock-recruitment")
 #pkgdown::build_article("articles/hierarchical-exchangeable-cmr")
@@ -59,6 +59,9 @@ pkgdown::build_articles()
 pkgdown::preview_site()
 
 
-hexSticker::sticker(imgurl, package="hbm4ecology", p_size=20, s_x=1, s_y=.8, s_width= .69,
-        h_fill = "#4da598", h_color = "#000000",
+hexSticker::sticker("inst/figures/Saumon_saut_Oir_JLB.jpg", package="hbm4ecology", p_size=20, s_x=1, s_y=.8, s_width= .69,
+        h_fill = "#618288", h_color = "#000000",
         filename="inst/figures/logo.png")
+
+
+# pkgdown::build_article(name = "vignettes/articles/namibian-hake-biomass-production.Rmd")

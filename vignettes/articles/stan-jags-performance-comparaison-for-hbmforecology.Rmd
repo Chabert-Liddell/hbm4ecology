@@ -699,6 +699,6 @@ results$hierstockrec$jags <- list(ESS/as.numeric(difftime(t5j, t0j, units = "sec
 ```
 
 ```{r echo=FALSE}
-saveRDS(results, file = "results_comp")
+saveRDS(results, file = "./results_comp.rds")
 ```
 

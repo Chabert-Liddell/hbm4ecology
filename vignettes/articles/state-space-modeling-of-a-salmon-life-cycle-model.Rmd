@@ -22,7 +22,7 @@ library(tidyverse)
 library(bayesplot)
 plot_theme <-  theme_classic(base_size = 15L) + 
   theme(axis.text.x =  element_text(angle = 90),
-        strip.background = element_rect(fill = "#4da598"),
+        strip.background = element_rect(fill = "#618288"),
         strip.text = element_text(size = 15))
 ```
 
@@ -718,7 +718,7 @@ model <- jags.model(file = textConnection(model_str),
                     data = data, inits = inits,
                     n.chains = 3)
 # Inferences
-update(model, n.iter = 10000)
+update(model, n.iter = 20000)
 posterior_sample <- coda.samples(
   model = model,
   variable.names = c("alpha", "beta", "sigma_2", # Production
@@ -726,21 +726,21 @@ posterior_sample <- coda.samples(
                      "theta_Sm1", "delta_ss1", "theta_m1", # Migration rate
                      "pf1", "pf2", # Proportion of female
                      "pi_sm", "pi_sp1", "pi_sp2", # Trapping efficiency
-                     "Eggs", "p_Eggs1`", "J", "LogRmean", "egg_juv_surv",
+                     "Eggs", "p_Eggs1", "J", "LogRmean", "egg_juv_surv",
                      "Jint", "PSm", "post.smolt1", "post.smolt2", # Juveniles and smolts
                      "Sm1", "Parr1", "Sm2", "Res1", "Sm",
                      "Sp11", "Sp12", "Sp21", "Sp22", "Sp1", "Sp2", "Sp", # Spawners
                      	"mean_p_Sm1", "mean_p_Sp1", "mean_p_Sp11", "mean_p_Sp12"
                      ),
-                       n.iter = 10000,
+                       n.iter = 30000,
                        thin = 10)
 ```
 
 ```{r echo=FALSE, eval=FALSE}
-saveRDS(posterior_sample, file = "./save/SalmonLifeCylcle/SLC_posterior.rds", )
+saveRDS(posterior_sample, file = "./SLC_posterior.rds")
 ```
 ```{r echo=FALSE}
-posterior_sample <- readRDS(file = "SLC_posterior.rds", )
+posterior_sample <- readRDS(file = "SLC_posterior.rds" )
 ```
 
 ```{r}
