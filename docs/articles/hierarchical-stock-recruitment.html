@@ -8,8 +8,8 @@
 <meta name="description" content="hbm4ecology">
 <title>Hierarchical Stock Recruitment Analysis • hbm4ecology</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.1.3/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.1.3/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
+<link href="../deps/bootstrap-5.1.0/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.1.0/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- bootstrap-toc --><script src="https://cdn.rawgit.com/afeld/bootstrap-toc/v1.0.1/dist/bootstrap-toc.min.js"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Hierarchical Stock Recruitment Analysis">
 <meta property="og:description" content="hbm4ecology">
@@ -46,6 +46,7 @@
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
     <a class="dropdown-item" href="../articles/state-space-modeling-of-a-salmon-life-cycle-model.html">State-space Modeling of A. Salmon Life Cycle Model</a>
+    <a class="dropdown-item" href="../articles/stan-jags-performance-comparaison-for-hbmforecology.html">Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data</a>
   </div>
 </li>
       </ul>
@@ -79,6 +80,8 @@ Chapter 9 - section 9.3</h3>
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Please visit the site https://Chabert-Liddell.github.io/hbm4ecology/articles/</span></span>
+<span><span class="co">#&gt;                           for R case study.</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/rstan/" class="external-link">rstan</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Loading required package: StanHeaders</span></span>
 <span><span class="co">#&gt; Loading required package: ggplot2</span></span>
@@ -88,7 +91,7 @@ Chapter 9 - section 9.3</h3>
 <span><span class="co">#&gt; To avoid recompilation of unchanged Stan programs, we recommend calling</span></span>
 <span><span class="co">#&gt; rstan_options(auto_write = TRUE)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/posterior/" class="external-link">posterior</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; This is posterior version 1.2.2</span></span>
+<span><span class="co">#&gt; This is posterior version 1.2.1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'posterior'</span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:rstan':</span></span>
@@ -98,13 +101,11 @@ Chapter 9 - section 9.3</h3>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     mad, sd, var</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Attaching packages</span></span></span>
-<span><span class="co">#&gt; ───────────────────────────────────────</span></span>
-<span><span class="co">#&gt; tidyverse 1.3.2 ──</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tibble </span> 3.1.8     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">dplyr  </span> 1.0.9</span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Attaching packages</span> ─────────────────────────────────────── tidyverse 1.3.1 ──</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tibble </span> 3.1.7     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">dplyr  </span> 1.0.9</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tidyr  </span> 1.2.0     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">stringr</span> 1.4.0</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">readr  </span> 2.1.2     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">forcats</span> 0.5.1</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">purrr  </span> 0.3.4     </span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">purrr  </span> 0.3.4</span></span>
 <span><span class="co">#&gt; ── <span style="font-weight: bold;">Conflicts</span> ────────────────────────────────────────── tidyverse_conflicts() ──</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">tidyr</span>::<span style="color: #00BB00;">extract()</span> masks <span style="color: #0000BB;">rstan</span>::extract()</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">dplyr</span>::<span style="color: #00BB00;">filter()</span>  masks <span style="color: #0000BB;">stats</span>::filter()</span></span>
@@ -472,21 +473,21 @@ Normal(0, \sigma_k^2)\)</span></li>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; Trying to compile a simple C file</span></span>
 <span><span class="co">#&gt; Running /usr/lib/R/bin/R CMD SHLIB foo.c</span></span>
-<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-kt0bjq/r-base-4.2.0=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
-<span><span class="co">#&gt; In file included from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-zYgbYq/r-base-4.2.1=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
 <span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
 <span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
 <span><span class="co">#&gt;       | ^~~~~~~~~</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
 <span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
 <span><span class="co">#&gt;       |                 ^</span></span>
-<span><span class="co">#&gt; In file included from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
 <span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
 <span><span class="co">#&gt;    96 | #include &lt;complex&gt;</span></span>
 <span><span class="co">#&gt;       |          ^~~~~~~~~</span></span>
 <span><span class="co">#&gt; compilation terminated.</span></span>
@@ -591,7 +592,7 @@ Normal(0, \sigma_k^2)\)</span></li>
 <span><span class="co">#&gt; hopt[13]   0.58    0.00  0.08  0.44  0.52   0.57   0.62   0.78  4580 1.00</span></span>
 <span><span class="co">#&gt; tau        3.73    0.02  0.57  2.69  3.33   3.71   4.10   4.92  1232 1.01</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Samples were drawn using NUTS(diag_e) at Mon Aug  8 18:04:33 2022.</span></span>
+<span><span class="co">#&gt; Samples were drawn using NUTS(diag_e) at Mon Aug 29 19:55:21 2022.</span></span>
 <span><span class="co">#&gt; For each parameter, n_eff is a crude measure of effective sample size,</span></span>
 <span><span class="co">#&gt; and Rhat is the potential scale reduction factor on split chains (at </span></span>
 <span><span class="co">#&gt; convergence, Rhat=1).</span></span></code></pre></div>
@@ -676,21 +677,21 @@ Normal(0, \sigma_k^2)\)</span></li>
 <span>                 model_name <span class="op">=</span>  <span class="va">model_name</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; Running /usr/lib/R/bin/R CMD SHLIB foo.c</span></span>
-<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-kt0bjq/r-base-4.2.0=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
-<span><span class="co">#&gt; In file included from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-zYgbYq/r-base-4.2.1=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
 <span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
 <span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
 <span><span class="co">#&gt;       | ^~~~~~~~~</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
 <span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
 <span><span class="co">#&gt;       |                 ^</span></span>
-<span><span class="co">#&gt; In file included from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
 <span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
 <span><span class="co">#&gt;    96 | #include &lt;complex&gt;</span></span>
 <span><span class="co">#&gt;       |          ^~~~~~~~~</span></span>
 <span><span class="co">#&gt; compilation terminated.</span></span>
@@ -796,7 +797,7 @@ Normal(0, \sigma_k^2)\)</span></li>
 <span><span class="co">#&gt; hopt[13]   0.58    0.00  0.08  0.44  0.53  0.57   0.63   0.79  4246 1.00</span></span>
 <span><span class="co">#&gt; tau        3.74    0.01  0.57  2.71  3.34  3.71   4.11   4.93  1477 1.00</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Samples were drawn using NUTS(diag_e) at Mon Aug  8 18:05:52 2022.</span></span>
+<span><span class="co">#&gt; Samples were drawn using NUTS(diag_e) at Mon Aug 29 19:56:14 2022.</span></span>
 <span><span class="co">#&gt; For each parameter, n_eff is a crude measure of effective sample size,</span></span>
 <span><span class="co">#&gt; and Rhat is the potential scale reduction factor on split chains (at </span></span>
 <span><span class="co">#&gt; convergence, Rhat=1).</span></span></code></pre></div>
@@ -1017,21 +1018,21 @@ with covariates</p>
 <span>                 model_name <span class="op">=</span>  <span class="va">model_name_hier</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Trying to compile a simple C file</span></span>
 <span><span class="co">#&gt; Running /usr/lib/R/bin/R CMD SHLIB foo.c</span></span>
-<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/stc/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-kt0bjq/r-base-4.2.0=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
-<span><span class="co">#&gt; In file included from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-zYgbYq/r-base-4.2.1=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
 <span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
 <span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
 <span><span class="co">#&gt;       | ^~~~~~~~~</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
 <span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
 <span><span class="co">#&gt;       |                 ^</span></span>
-<span><span class="co">#&gt; In file included from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
-<span><span class="co">#&gt;                  from /home/stc/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
 <span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
-<span><span class="co">#&gt; /home/stc/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
 <span><span class="co">#&gt;    96 | #include &lt;complex&gt;</span></span>
 <span><span class="co">#&gt;       |          ^~~~~~~~~</span></span>
 <span><span class="co">#&gt; compilation terminated.</span></span>
@@ -1144,7 +1145,7 @@ with covariates</p>
 <span><span class="co">#&gt; beta     -9.69    0.05  2.67 -15.39 -11.26 -9.53 -7.94  -4.82  2993    1</span></span>
 <span><span class="co">#&gt; CV_S      0.65    0.00  0.18   0.37   0.52  0.62  0.75   1.07  3944    1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Samples were drawn using NUTS(diag_e) at Mon Aug  8 18:08:06 2022.</span></span>
+<span><span class="co">#&gt; Samples were drawn using NUTS(diag_e) at Mon Aug 29 19:57:34 2022.</span></span>
 <span><span class="co">#&gt; For each parameter, n_eff is a crude measure of effective sample size,</span></span>
 <span><span class="co">#&gt; and Rhat is the potential scale reduction factor on split chains (at </span></span>
 <span><span class="co">#&gt; convergence, Rhat=1).</span></span></code></pre></div>

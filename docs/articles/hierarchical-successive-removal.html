@@ -43,10 +43,10 @@
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/hierarchical-exchangeable-cmr.html">Hierarchical Exchangeable Binomial Model for Capture-Mark-Recapture Data</a>
     <a class="dropdown-item" href="../articles/hierarchical-stock-recruitment.html">Hierarchical Stock Recruitment Analysis</a>
-    <a class="dropdown-item" href="../articles/hierarchical-succesive-removal-with-habitat-and-time-covariates.html">Hierarchical Model for Successive Removal Data with Habitat and Time Covariates</a>
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
     <a class="dropdown-item" href="../articles/state-space-modeling-of-a-salmon-life-cycle-model.html">State-space Modeling of A. Salmon Life Cycle Model</a>
+    <a class="dropdown-item" href="../articles/stan-jags-performance-comparaison-for-hbmforecology.html">Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data</a>
   </div>
 </li>
       </ul>
@@ -648,39 +648,39 @@ successive removals.</p>
 <tbody>
 <tr class="odd">
 <td align="left">a</td>
-<td align="right">1.000409</td>
-<td align="right">1970.642</td>
-<td align="right">2753.226</td>
+<td align="right">1.0000086</td>
+<td align="right">2207.324</td>
+<td align="right">2654.666</td>
 </tr>
 <tr class="even">
 <td align="left">b</td>
-<td align="right">1.000852</td>
-<td align="right">2102.485</td>
-<td align="right">2684.452</td>
+<td align="right">1.0001652</td>
+<td align="right">2283.140</td>
+<td align="right">2688.094</td>
 </tr>
 <tr class="odd">
 <td align="left">c</td>
-<td align="right">1.000019</td>
-<td align="right">2734.448</td>
-<td align="right">2759.075</td>
+<td align="right">1.0000427</td>
+<td align="right">2800.646</td>
+<td align="right">2710.848</td>
 </tr>
 <tr class="even">
 <td align="left">d</td>
-<td align="right">1.000464</td>
-<td align="right">2701.168</td>
-<td align="right">2689.600</td>
+<td align="right">0.9999242</td>
+<td align="right">2875.790</td>
+<td align="right">2885.734</td>
 </tr>
 <tr class="odd">
 <td align="left">mu_d</td>
-<td align="right">1.000317</td>
-<td align="right">2926.402</td>
-<td align="right">2845.416</td>
+<td align="right">0.9999451</td>
+<td align="right">2880.455</td>
+<td align="right">2597.036</td>
 </tr>
 <tr class="even">
 <td align="left">mu_p</td>
-<td align="right">1.000003</td>
-<td align="right">2067.747</td>
-<td align="right">2480.764</td>
+<td align="right">1.0006883</td>
+<td align="right">2502.721</td>
+<td align="right">2700.134</td>
 </tr>
 </tbody>
 </table>
@@ -773,15 +773,10 @@ between sites helps specify the probable joint domain where <span class="math in
 <span>       y<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="va">pi</span><span class="op">)</span>,title<span class="op">=</span><span class="st">"Fish density vs Capture efficiency at site 5"</span>,</span>
 <span>       subtitle <span class="op">=</span> <span class="st">"Hierarchical model"</span><span class="op">)</span> </span>
 <span><span class="fu">ggExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/ggExtra/man/ggMarginal.html" class="external-link">ggMarginal</a></span><span class="op">(</span><span class="va">phier</span>, type <span class="op">=</span> <span class="st">"densigram"</span>, bins <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Removed 1 rows containing non-finite values (stat_density2d).</span></span>
-<span><span class="co">#&gt; Removed 1 rows containing non-finite values (stat_density2d).</span></span>
-<span><span class="co">#&gt; Warning: Removed 1 rows containing missing values (geom_point).</span></span>
 <span><span class="co">#&gt; Warning: Ignoring unknown parameters: bins</span></span>
 <span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
 <span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
-<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span>
-<span><span class="co">#&gt; Warning: Removed 1 rows containing non-finite values (stat_density2d).</span></span>
-<span><span class="co">#&gt; Warning: Removed 1 rows containing missing values (geom_point).</span></span></code></pre></div>
+<span><span class="co">#&gt; Ignoring unknown parameters: bins</span></span></code></pre></div>
 <p><img src="hierarchical-successive-removal_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">phier</span> <span class="op">&lt;-</span> <span class="va">dfw_hier</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
@@ -1158,51 +1153,51 @@ of information for the 0+ juveniles density.</p>
 <tbody>
 <tr class="odd">
 <td align="left">a</td>
-<td align="right">1.0005142</td>
-<td align="right">1777.6952</td>
-<td align="right">2573.62550</td>
+<td align="right">0.9998840</td>
+<td align="right">2029.4588</td>
+<td align="right">2781.9576</td>
 </tr>
 <tr class="even">
 <td align="left">b</td>
-<td align="right">1.0004584</td>
-<td align="right">2013.1244</td>
-<td align="right">2645.77014</td>
+<td align="right">1.0002102</td>
+<td align="right">2294.4066</td>
+<td align="right">2829.9883</td>
 </tr>
 <tr class="odd">
 <td align="left">c</td>
-<td align="right">1.0065860</td>
-<td align="right">905.0429</td>
-<td align="right">1638.84610</td>
+<td align="right">1.0042604</td>
+<td align="right">1116.3178</td>
+<td align="right">2283.0722</td>
 </tr>
 <tr class="even">
 <td align="left">d</td>
-<td align="right">1.0056234</td>
-<td align="right">688.4648</td>
-<td align="right">1417.10358</td>
+<td align="right">1.0094108</td>
+<td align="right">723.2803</td>
+<td align="right">1751.8044</td>
 </tr>
 <tr class="odd">
 <td align="left">k</td>
-<td align="right">1.0028519</td>
-<td align="right">477.5125</td>
-<td align="right">976.43643</td>
+<td align="right">1.0139487</td>
+<td align="right">448.7799</td>
+<td align="right">790.3346</td>
 </tr>
 <tr class="even">
 <td align="left">mu_d</td>
-<td align="right">1.0021109</td>
-<td align="right">691.8477</td>
-<td align="right">1235.81052</td>
+<td align="right">1.0113785</td>
+<td align="right">666.4471</td>
+<td align="right">1436.7747</td>
 </tr>
 <tr class="odd">
 <td align="left">mu_p</td>
-<td align="right">0.9999183</td>
-<td align="right">2460.4196</td>
-<td align="right">2739.95838</td>
+<td align="right">0.9993467</td>
+<td align="right">2560.4025</td>
+<td align="right">2899.8039</td>
 </tr>
 <tr class="even">
 <td align="left">phi</td>
-<td align="right">1.0242515</td>
-<td align="right">124.0918</td>
-<td align="right">62.51027</td>
+<td align="right">1.0154339</td>
+<td align="right">335.2859</td>
+<td align="right">412.8917</td>
 </tr>
 </tbody>
 </table>
@@ -1255,7 +1250,7 @@ posterior pdf varies around <span class="math inline">\(0.65\)</span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ylab</a></span><span class="op">(</span><span class="st">"Fish density"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15L</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expression.html" class="external-link">expression</a></span><span class="op">(</span><span class="st">"Marginal posterior distributions of salmon densities delta for each site index."</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Removed 1161 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
+<span><span class="co">#&gt; Warning: Removed 2188 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
 <p><img src="hierarchical-successive-removal_files/figure-html/plot-10-14-1.png" width="700"></p>
 <p>The figure makes clear the shrinkage effect due to hierarchical
 modeling: with the hierarchical model, the densities are less dispersed
@@ -1326,7 +1321,7 @@ Florida.
 
 <div class="pkgdown-footer-right">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.5.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
     </footer>

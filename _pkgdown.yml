@@ -12,7 +12,6 @@ navbar:
     - intro
     - reference
     - articles
-    - tutorials
     - news
     right: github
   components:
@@ -32,9 +31,11 @@ navbar:
         href: articles/namibian-hake-biomass-production.html
       - text: State-space Modeling of A. Salmon Life Cycle Model
         href: articles/state-space-modeling-of-a-salmon-life-cycle-model.html
+      - text: Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data
+        href: articles/stan-jags-performance-comparaison-for-hbmforecology.html
 reference:
 - title: "Data"
-  desc: "Data available from the different example"
+  desc: "Data available from the different examples"
   contents:
   - CmrOir
   - SRSalmon

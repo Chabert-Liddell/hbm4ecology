@@ -5,7 +5,7 @@ title: "Stan and Jags performance comparaison for Hierarchical Bayesian Modeling
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>", dpi = 150
 )
 ```
 
@@ -20,17 +20,18 @@ library(shinystan)
 library(rjags)
 ```
 
-In this article we are going to compare the performance of the Hamiltonian Monte Carlo using `rstan` and the Monte Carlo Markov Chain using `rjags` on the biomass production model and the hierarchical stock-recruitment model.
+In this article we are going to compare the performance of the Hamiltonian Monte Carlo using `rstan` and the Monte Carlo Markov Chain using `rjags` on the biomass production model, stock-recruitment model with hiearchical modeling and with independent site as well as the life cycle model. For the last model, we modify the observed data in order to make a proper sampling of the population size with `stan`.
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 data("BioprodNamibianHake")
 data("SRSalmon")
+data("SalmonLifeCycle")
 ```
 
 
 # Biomass Production Model
 
-```{r stan-model}
+```{r stan-model, echo=FALSE, eval=FALSE, include=FALSE}
 stan_model_biomprod <- "
 data {
   int N;
@@ -86,13 +87,13 @@ generated quantities {
 "
 ```
 
-```{r data}
+```{r data, echo=FALSE, eval=FALSE, include=FALSE}
 dat_list <- BioprodNamibianHake
 dat_list$I <- BioprodNamibianHake$I[2:25]
 dat_list$NF <- 5
 ```
 
-```{r fit-model, cache=TRUE}
+```{r fit-model, cache=TRUE, echo=FALSE, eval=FALSE, include=FALSE}
 model_name <-"BiomProd_NamibianHake"
 t0 <- Sys.time()
 sm_hier <- stan_model(model_code =  stan_model_biomprod,
@@ -116,13 +117,13 @@ fit_hier <- sampling(object = sm_hier,
 t3 <- Sys.time()
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 #monitor(rstan::extract(fit_hier, pars = c("r", "q", "sig"), permuted = FALSE, inc_warmup = TRUE))
 #print(fit_hier, pars =  c("r", "q", "sig", "P"))
 
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 biomprod_jags_model_str <-  
 "model {
 
@@ -203,12 +204,12 @@ for (t in 1:N) {
 } # End model"
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 results <- list()
 ```
 
 
-```{r bioprod-fit-jags, cache=TRUE}
+```{r bioprod-fit-jags, cache=TRUE, echo=FALSE, eval=FALSE, include=FALSE}
 t0j <- Sys.time()
 biomprod_jags_model <- jags.model(file = textConnection(biomprod_jags_model_str), 
                     data = BioprodNamibianHake,
@@ -228,7 +229,7 @@ posterior_sample <- jags.samples(
 t5j <- Sys.time()
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 samples <- cbind( matrix( posterior_sample$q[1,,1], ncol=1 ),
                   matrix( posterior_sample$r[1,,1], ncol=1 ),
                   matrix( posterior_sample$sigma2p[1,,1], ncol=1 ) )
@@ -246,7 +247,7 @@ results$bioprod$jags <- list(ESS/as.numeric(difftime(t5j, t0j, units = "secs")),
                           ESS/as.numeric(difftime(t5j, t4j, units = "secs")))
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 
 shinystan.obj.stan <- as.shinystan(fit_hier)
 # retrieve effective sample size (ESS)
@@ -263,7 +264,7 @@ results$bioprod$stan <- list(ESS.stan/as.numeric(difftime(t3, t0, units = "secs"
 
 ## Independent model
 
-```{r gamma-model}
+```{r gamma-model, echo=FALSE, eval=FALSE, include=FALSE}
 hsr_model_indep_S_gamma_stan <- "
 data {
   int n_riv; // Number of rivers
@@ -309,7 +310,7 @@ model {
 "
 ```
 
-```{r gamma-compil, cache = TRUE, message=FALSE}
+```{r gamma-compil, cache = TRUE, message=FALSE, echo=FALSE, eval=FALSE, include=FALSE}
 t0s <- Sys.time()
 model_name <-"HSR_Ricker_LogN_Management_S_gamma"
 sm <- stan_model(model_code =  hsr_model_indep_S_gamma_stan,
@@ -319,7 +320,7 @@ t1s <- Sys.time()
 ```
 
 
-```{r gamma-fit, cache = TRUE}
+```{r gamma-fit, cache = TRUE, echo=FALSE, eval=FALSE, include=FALSE}
 set.seed(1234)
 # Number iteration for the "warm up" phase
 n_warm <- 10000
@@ -344,20 +345,20 @@ fit <- sampling(object = sm,
 t3s <- Sys.time()
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 stan_indfit_sso <- as.shinystan(fit)
 ESS.stan <- stan_indfit_sso@summary[-28, "n_eff"]
 #( ESS.stan <- retrieve( stan_indfit_sso, "ess", pars = c("Sopt", "hopt", "tau") ))
 ESS.stan/get_elapsed_time(fit)[,2]
 ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs"))
 ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs"))
-results$indstockrec$jags <- list(ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs")),
+results$indstockrec$stan <- list(ESS.stan/as.numeric(difftime(t3s, t0s, units = "secs")),
                           ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs")),
                           ESS.stan/get_elapsed_time(fit)[,2])
 ```
 
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 ind_stockrec_model <- "model
 {
 
@@ -416,7 +417,7 @@ R[i] ~ dlnorm(log.R[i], tau)
 }  # end model"
 ```
 
-```{r indSR-fit-jags, cache=TRUE}
+```{r indSR-fit-jags, cache=TRUE, echo=FALSE, eval=FALSE, include=FALSE}
 t0j <- Sys.time()
 ind_stockrec_jags_model <- jags.model(file = textConnection(ind_stockrec_model), 
                     data = SRSalmon,
@@ -436,7 +437,7 @@ posterior_sample <- jags.samples(
 t5j <- Sys.time()
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 # summarise_draws(as_draws_df(posterior_sample),
 #                 default_convergence_measures()) %>% 
 #   filter(variable %in% c("r", "q", "sigma2p"))
@@ -461,7 +462,7 @@ results$indstockrec$jags <- list(ESS/as.numeric(difftime(t5j, t0j, units = "secs
 ```
 
 ## Hierarchical model with latitude covariates
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 hsr_model_hier_S_gamma_stan <- "
 data {
   int n_riv; // Number of rivers
@@ -549,7 +550,7 @@ model {
 ```
 
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 hier_stockrec_model <- "
 model
 {
@@ -613,7 +614,7 @@ R[i] ~ dlnorm(log.R[i], tau)
 }  # end model"
 ```
 
-```{r stan-hier-compil, cache = TRUE, message=FALSE}
+```{r stan-hier-compil, cache = TRUE, message=FALSE, echo=FALSE, eval=FALSE, include=FALSE}
 t0s <- Sys.time()
 model_name <-"hierarchical-stock-recruitment"
 sm <- stan_model(model_code =  hsr_model_hier_S_gamma_stan,
@@ -623,7 +624,7 @@ t1s <- Sys.time()
 ```
 
 
-```{r stan-hier-fit, cache = TRUE}
+```{r stan-hier-fit, cache = TRUE, echo=FALSE, eval=FALSE, include=FALSE}
 set.seed(1234)
 # Number iteration for the "warm up" phase
 n_warm <- 10000
@@ -648,7 +649,7 @@ fit <- sampling(object = sm,
 t3s <- Sys.time()
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 stan_hierfit_sso <- as.shinystan(fit)
 ESS.stan <- stan_hierfit_sso@summary[-28, "n_eff"]
 #( ESS.stan <- retrieve( stan_hierfit_sso, "ess", pars = c("Sopt", "hopt", "tau") ))
@@ -661,7 +662,7 @@ results$hierstockrec$stan <- list(ESS.stan/as.numeric(difftime(t3s, t0s, units =
 ```
 
 
-```{r hierSR-fit-jags, cache=TRUE}
+```{r hierSR-fit-jags, cache=TRUE, echo=FALSE, eval=FALSE, include=FALSE}
 t0j <- Sys.time()
 hier_stockrec_jags_model <- jags.model(file = textConnection(hier_stockrec_model), 
                     data = SRSalmon,
@@ -681,7 +682,7 @@ posterior_sample <- jags.samples(
 t5j <- Sys.time()
 ```
 
-```{r}
+```{r echo=FALSE, eval=FALSE, include=FALSE}
 samples <- cbind( matrix( posterior_sample$tau[1,,1], ncol=1 ),
                   matrix( posterior_sample$hst[1:13,,1], ncol=13 ),
                   matrix( posterior_sample$Sst[1:13,,1], ncol=13 ) )
@@ -699,6 +700,152 @@ results$hierstockrec$jags <- list(ESS/as.numeric(difftime(t5j, t0j, units = "sec
 ```
 
 ```{r echo=FALSE}
-saveRDS(results, file = "./results_comp.rds")
+results_comp <- readRDS("./results_comp.rds")
+
+
+#saveRDS(results, file = "./results_comp.rds")
 ```
 
+## Comparaison of the effective sampling size per second
+
+We sample from one chain, using no thinning with 10000 iterations for warm-up and 90000 iterations after warm-up. The following plots give the effective sample size per second for the iterations after warm-up.
+
+```{r echo=FALSE}
+tibble(jags = results_comp$bioprod$jags[[1]],
+       stan = results_comp$bioprod$stan[[1]]) %>% 
+  mutate(Model = "BioProd") %>% 
+  bind_rows(
+    tibble(jags = results_comp$indstockrec$jags[[1]],
+       stan = results_comp$indstockrec$stan[[1]]) %>%
+      mutate(Model = "IndStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$hierstockrec$jags[[1]],
+       stan = results_comp$hierstockrec$stan[[1]]) %>%
+      mutate(Model = "HierStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$lifecycle$jags[[1]],
+       stan = results_comp$lifecycle$stan[[1]]) %>%
+      mutate(Model = "LifeCycle")) %>%
+  mutate(Model = factor(Model, levels = c("IndStockRec", "HierStockRec", "BioProd", "LifeCycle"))) %>% 
+  ggplot(aes(y = stan, x = jags, col = Model)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1) +
+ scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) + 
+ scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) + 
+  xlab("N_eff/sec Jags") +
+  ylab("N_eff/sec  Stan") +
+#  scale_x_log10() +
+#  scale_y_log10() +
+  theme_bw(base_size = 20) +
+  annotation_logticks(sides = "lbtr") +
+  theme(panel.grid.major.x = element_blank())
+```
+
+
+```{r echo=FALSE}
+tibble(jags = results_comp$bioprod$jags[[1]],
+       stan = results_comp$bioprod$stan[[1]]) %>% 
+  mutate(Model = "BioProd") %>% 
+  bind_rows(
+    tibble(jags = results_comp$indstockrec$jags[[1]],
+       stan = results_comp$indstockrec$stan[[1]]) %>%
+      mutate(Model = "IndStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$hierstockrec$jags[[1]],
+       stan = results_comp$hierstockrec$stan[[1]]) %>%
+      mutate(Model = "HierStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$lifecycle$jags[[1]],
+       stan = results_comp$lifecycle$stan[[1]]) %>%
+      mutate(Model = "LifeCycle")) %>%
+  mutate(Model = factor(Model, levels = c("IndStockRec", "HierStockRec", "BioProd", "LifeCycle"))) %>% 
+  ggplot(aes(y = stan/jags, x = Model, fill = Model)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 1) +
+ scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) + 
+  ylab("N_eff Ratio Stan/Jags") +
+#  scale_x_log10() +
+#  scale_y_log10() +
+  theme_bw(base_size = 20) +
+  annotation_logticks(sides = "lr") +
+  theme(panel.grid.major.x = element_blank())
+
+```
+
+## Comparaison of the effective sampling size per second, including compilation times and warm up.
+
+The following ones include the compilation time and warm-up. We notice that for simple models `jags` outperform `stan` greatly, but as the model complexity grows, `jags` performance decays while the one of `stan` remains stable.
+
+```{r echo=FALSE}
+tibble(jags = results_comp$bioprod$jags[[3]],
+       stan = results_comp$bioprod$stan[[3]]) %>% 
+  mutate(Model = "BioProd") %>% 
+  bind_rows(
+    tibble(jags = results_comp$indstockrec$jags[[3]],
+       stan = results_comp$indstockrec$stan[[3]]) %>%
+      mutate(Model = "IndStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$hierstockrec$jags[[3]],
+       stan = results_comp$hierstockrec$stan[[3]]) %>%
+      mutate(Model = "HierStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$lifecycle$jags[[3]],
+       stan = results_comp$lifecycle$stan[[3]]) %>%
+      mutate(Model = "LifeCycle")) %>%
+  mutate(Model = factor(Model, levels = c("IndStockRec", "HierStockRec", "BioProd", "LifeCycle"))) %>% 
+  ggplot(aes(y = stan, x = jags, col = Model)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1) +
+ scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) + 
+ scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) + 
+  xlab("N_eff/sec Jags") +
+  ylab("N_eff/sec  Stan") +
+#  scale_x_log10() +
+#  scale_y_log10() +
+  theme_bw(base_size = 20) +
+  annotation_logticks(sides = "lbtr") +
+  theme(panel.grid.major.x = element_blank())
+```
+
+
+```{r echo=FALSE}
+tibble(jags = results_comp$bioprod$jags[[3]],
+       stan = results_comp$bioprod$stan[[3]]) %>% 
+  mutate(Model = "BioProd") %>% 
+  bind_rows(
+    tibble(jags = results_comp$indstockrec$jags[[3]],
+       stan = results_comp$indstockrec$stan[[3]]) %>%
+      mutate(Model = "IndStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$hierstockrec$jags[[3]],
+       stan = results_comp$hierstockrec$stan[[3]]) %>%
+      mutate(Model = "HierStockRec")) %>% 
+    bind_rows(
+    tibble(jags = results_comp$lifecycle$jags[[3]],
+       stan = results_comp$lifecycle$stan[[3]]) %>%
+      mutate(Model = "LifeCycle")) %>%
+  mutate(Model = factor(Model, levels = c("IndStockRec", "HierStockRec", "BioProd", "LifeCycle"))) %>% 
+  ggplot(aes(y = stan/jags, x = Model, fill = Model)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 1) +
+ scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) + 
+  ylab("N_eff Ratio Stan/Jags") +
+#  scale_x_log10() +
+#  scale_y_log10() +
+  theme_bw(base_size = 20) +
+  annotation_logticks(sides = "lr") +
+  theme(panel.grid.major.x = element_blank())
+
+```

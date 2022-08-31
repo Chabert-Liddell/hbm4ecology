@@ -55,6 +55,7 @@ pkgdown::build_favicons()
 #pkgdown::build_article("articles/hierarchical-succesive-removal-with-habitat-and-time-covariates")
 #pkgdown::build_article("articles/hierarchical-successive-removal")
 #pkgdown::build_article("articles/state-space-modeling-of-a-salmon-life-cycle-model")
+#pkgdown::build_article("articles/stan-jags-performance-comparaison-for-hbmforecology")
 pkgdown::build_articles()
 pkgdown::preview_site()
 

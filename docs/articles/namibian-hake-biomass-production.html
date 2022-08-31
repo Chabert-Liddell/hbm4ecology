@@ -8,8 +8,8 @@
 <meta name="description" content="hbm4ecology">
 <title>Biomass Production Model: The Namibian Hake Fishery • hbm4ecology</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.1.3/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.1.3/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
+<link href="../deps/bootstrap-5.1.0/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.1.0/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- bootstrap-toc --><script src="https://cdn.rawgit.com/afeld/bootstrap-toc/v1.0.1/dist/bootstrap-toc.min.js"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Biomass Production Model: The Namibian Hake Fishery">
 <meta property="og:description" content="hbm4ecology">
@@ -46,6 +46,7 @@
     <a class="dropdown-item" href="../articles/hierarchical-successive-removal.html">Hierarchical Successive Removal</a>
     <a class="dropdown-item" href="../articles/namibian-hake-biomass-production.html">Biomass Production Model: The Namibian Hake Fishery</a>
     <a class="dropdown-item" href="../articles/state-space-modeling-of-a-salmon-life-cycle-model.html">State-space Modeling of A. Salmon Life Cycle Model</a>
+    <a class="dropdown-item" href="../articles/stan-jags-performance-comparaison-for-hbmforecology.html">Stan and Jags performance comparaison for Hierarchical Bayesian Modeling for Ecological Data</a>
   </div>
 </li>
       </ul>
@@ -77,6 +78,8 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hbm4ecology</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Please visit the site https://Chabert-Liddell.github.io/hbm4ecology/articles/</span></span>
+<span><span class="co">#&gt;                           for R case study.</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/rstan/" class="external-link">rstan</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Loading required package: StanHeaders</span></span>
 <span><span class="co">#&gt; Loading required package: ggplot2</span></span>
@@ -86,13 +89,11 @@
 <span><span class="co">#&gt; To avoid recompilation of unchanged Stan programs, we recommend calling</span></span>
 <span><span class="co">#&gt; rstan_options(auto_write = TRUE)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── <span style="font-weight: bold;">Attaching packages</span></span></span>
-<span><span class="co">#&gt; ───────────────────────────────────────</span></span>
-<span><span class="co">#&gt; tidyverse 1.3.2 ──</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tibble </span> 3.1.8     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">dplyr  </span> 1.0.9</span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Attaching packages</span> ─────────────────────────────────────── tidyverse 1.3.1 ──</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tibble </span> 3.1.7     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">dplyr  </span> 1.0.9</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">tidyr  </span> 1.2.0     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">stringr</span> 1.4.0</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">readr  </span> 2.1.2     <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">forcats</span> 0.5.1</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">purrr  </span> 0.3.4     </span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> <span style="color: #0000BB;">purrr  </span> 0.3.4</span></span>
 <span><span class="co">#&gt; ── <span style="font-weight: bold;">Conflicts</span> ────────────────────────────────────────── tidyverse_conflicts() ──</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">tidyr</span>::<span style="color: #00BB00;">extract()</span> masks <span style="color: #0000BB;">rstan</span>::extract()</span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> <span style="color: #0000BB;">dplyr</span>::<span style="color: #00BB00;">filter()</span>  masks <span style="color: #0000BB;">stats</span>::filter()</span></span>
@@ -102,14 +103,12 @@
 <span><span class="co">#&gt;   method from   </span></span>
 <span><span class="co">#&gt;   +.gg   ggplot2</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://mc-stan.org/posterior/" class="external-link">posterior</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; This is posterior version 1.2.2</span></span>
+<span><span class="co">#&gt; This is posterior version 1.2.1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'posterior'</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:rstan':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     ess_bulk, ess_tail</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     mad, sd, var</span></span>
@@ -121,7 +120,6 @@
 <span><span class="co">#&gt;    * See ?bayesplot_theme_set for details on theme setting</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'bayesplot'</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; The following object is masked from 'package:posterior':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     rhat</span></span></code></pre></div>
@@ -325,6 +323,27 @@ biomass production model</p>
 <code class="sourceCode R"><span><span class="va">model_name</span> <span class="op">&lt;-</span><span class="st">"BiomProd_NamibianHake"</span></span>
 <span><span class="va">sm_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mc-stan.org/rstan/reference/stan_model.html" class="external-link">stan_model</a></span><span class="op">(</span>model_code <span class="op">=</span>  <span class="va">stan_model_biomprod</span>,</span>
 <span>                 model_name <span class="op">=</span>  <span class="va">model_name</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Trying to compile a simple C file</span></span>
+<span><span class="co">#&gt; Running /usr/lib/R/bin/R CMD SHLIB foo.c</span></span>
+<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-zYgbYq/r-base-4.2.1=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
+<span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
+<span><span class="co">#&gt;       | ^~~~~~~~~</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
+<span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
+<span><span class="co">#&gt;       |                 ^</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
+<span><span class="co">#&gt;    96 | #include &lt;complex&gt;</span></span>
+<span><span class="co">#&gt;       |          ^~~~~~~~~</span></span>
+<span><span class="co">#&gt; compilation terminated.</span></span>
+<span><span class="co">#&gt; make: *** [/usr/lib/R/etc/Makeconf:168: foo.o] Error 1</span></span>
 <span></span>
 <span><span class="va">fit_hier</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mc-stan.org/rstan/reference/stanmodel-method-sampling.html" class="external-link">sampling</a></span><span class="op">(</span>object <span class="op">=</span> <span class="va">sm_hier</span>,</span>
 <span>                data <span class="op">=</span> <span class="va">dat_list</span>, </span>
@@ -340,8 +359,8 @@ biomass production model</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake' NOW (CHAIN 1).</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
-<span><span class="co">#&gt; Chain 1: Gradient evaluation took 4.1e-05 seconds</span></span>
-<span><span class="co">#&gt; Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.41 seconds.</span></span>
+<span><span class="co">#&gt; Chain 1: Gradient evaluation took 2.4e-05 seconds</span></span>
+<span><span class="co">#&gt; Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.24 seconds.</span></span>
 <span><span class="co">#&gt; Chain 1: Adjust your expectations accordingly!</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
@@ -358,9 +377,9 @@ biomass production model</p>
 <span><span class="co">#&gt; Chain 1: Iteration: 3600 / 4000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 1: Iteration: 4000 / 4000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
-<span><span class="co">#&gt; Chain 1:  Elapsed Time: 2.31355 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 1:                2.5854 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 1:                4.89894 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 1:  Elapsed Time: 2.58522 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 1:                2.26416 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 1:                4.84939 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake' NOW (CHAIN 2).</span></span>
@@ -383,15 +402,15 @@ biomass production model</p>
 <span><span class="co">#&gt; Chain 2: Iteration: 3600 / 4000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 2: Iteration: 4000 / 4000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 2: </span></span>
-<span><span class="co">#&gt; Chain 2:  Elapsed Time: 2.71074 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 2:                2.26846 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 2:                4.9792 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 2:  Elapsed Time: 2.6589 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 2:                3.28409 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 2:                5.94299 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 2: </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake' NOW (CHAIN 3).</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
-<span><span class="co">#&gt; Chain 3: Gradient evaluation took 1.9e-05 seconds</span></span>
-<span><span class="co">#&gt; Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.19 seconds.</span></span>
+<span><span class="co">#&gt; Chain 3: Gradient evaluation took 1.4e-05 seconds</span></span>
+<span><span class="co">#&gt; Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.14 seconds.</span></span>
 <span><span class="co">#&gt; Chain 3: Adjust your expectations accordingly!</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
@@ -408,15 +427,15 @@ biomass production model</p>
 <span><span class="co">#&gt; Chain 3: Iteration: 3600 / 4000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 3: Iteration: 4000 / 4000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
-<span><span class="co">#&gt; Chain 3:  Elapsed Time: 2.82042 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 3:                3.66707 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 3:                6.48749 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 3:  Elapsed Time: 2.91949 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 3:                2.5367 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 3:                5.45619 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake' NOW (CHAIN 4).</span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
-<span><span class="co">#&gt; Chain 4: Gradient evaluation took 1.8e-05 seconds</span></span>
-<span><span class="co">#&gt; Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.18 seconds.</span></span>
+<span><span class="co">#&gt; Chain 4: Gradient evaluation took 1.4e-05 seconds</span></span>
+<span><span class="co">#&gt; Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.14 seconds.</span></span>
 <span><span class="co">#&gt; Chain 4: Adjust your expectations accordingly!</span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
@@ -433,9 +452,9 @@ biomass production model</p>
 <span><span class="co">#&gt; Chain 4: Iteration: 3600 / 4000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 4: Iteration: 4000 / 4000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
-<span><span class="co">#&gt; Chain 4:  Elapsed Time: 3.1189 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 4:                2.80311 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 4:                5.922 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 4:  Elapsed Time: 2.32494 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 4:                2.429 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 4:                4.75394 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 4:</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pars</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r"</span>, <span class="st">"K"</span>, <span class="st">"q"</span>, <span class="st">"sig"</span><span class="op">)</span></span>
@@ -459,7 +478,7 @@ biomass production model</p>
 <code class="sourceCode R"><span><span class="co">#mcmc_trace(fit_hier, pars = pars)</span></span>
 <span><span class="fu"><a href="https://mc-stan.org/posterior/reference/rhat.html" class="external-link">rhat</a></span><span class="op">(</span><span class="va">fit_hier</span>, pars <span class="op">=</span> <span class="va">pars</span><span class="op">)</span></span>
 <span><span class="co">#&gt;        r        K        q      sig </span></span>
-<span><span class="co">#&gt; 1.001974 1.004482 1.000692 1.000704</span></span></code></pre></div>
+<span><span class="co">#&gt; 1.003736 1.004431 1.003602 1.001359</span></span></code></pre></div>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/pairs.html" class="external-link">pairs</a></span><span class="op">(</span><span class="va">fit_hier</span>, pars <span class="op">=</span> <span class="va">pars</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in par(usr): argument 1 does not name a graphical parameter</span></span>
@@ -512,51 +531,51 @@ biomass production model</p>
 <tbody>
 <tr class="odd">
 <td align="left">B_MSY</td>
-<td align="right">2174.69171</td>
-<td align="right">1132.59716</td>
-<td align="right">1089.99437</td>
-<td align="right">1809.47768</td>
-<td align="right">5752.25294</td>
+<td align="right">2289.02482</td>
+<td align="right">1214.22054</td>
+<td align="right">1136.20020</td>
+<td align="right">1880.48317</td>
+<td align="right">6101.15625</td>
 </tr>
 <tr class="even">
 <td align="left">C_MSY</td>
-<td align="right">268.28650</td>
-<td align="right">48.97590</td>
-<td align="right">163.92241</td>
-<td align="right">269.69003</td>
-<td align="right">366.48050</td>
+<td align="right">266.53760</td>
+<td align="right">54.75535</td>
+<td align="right">143.32551</td>
+<td align="right">268.44564</td>
+<td align="right">369.43237</td>
 </tr>
 <tr class="odd">
 <td align="left">K</td>
-<td align="right">4349.38342</td>
-<td align="right">2265.19432</td>
-<td align="right">2179.98874</td>
-<td align="right">3618.95535</td>
-<td align="right">11504.50588</td>
+<td align="right">4578.04964</td>
+<td align="right">2428.44108</td>
+<td align="right">2272.40039</td>
+<td align="right">3760.96635</td>
+<td align="right">12202.31249</td>
 </tr>
 <tr class="even">
 <td align="left">q</td>
-<td align="right">0.00035</td>
+<td align="right">0.00034</td>
 <td align="right">0.00012</td>
-<td align="right">0.00012</td>
-<td align="right">0.00035</td>
-<td align="right">0.00059</td>
+<td align="right">0.00011</td>
+<td align="right">0.00034</td>
+<td align="right">0.00057</td>
 </tr>
 <tr class="odd">
 <td align="left">r</td>
-<td align="right">0.29560</td>
-<td align="right">0.11706</td>
-<td align="right">0.07328</td>
-<td align="right">0.29819</td>
-<td align="right">0.52404</td>
+<td align="right">0.28277</td>
+<td align="right">0.11602</td>
+<td align="right">0.05890</td>
+<td align="right">0.28528</td>
+<td align="right">0.50560</td>
 </tr>
 <tr class="even">
 <td align="left">sig2</td>
-<td align="right">0.00911</td>
-<td align="right">0.00316</td>
-<td align="right">0.00479</td>
-<td align="right">0.00849</td>
-<td align="right">0.01683</td>
+<td align="right">0.00940</td>
+<td align="right">0.00334</td>
+<td align="right">0.00491</td>
+<td align="right">0.00874</td>
+<td align="right">0.01771</td>
 </tr>
 </tbody>
 </table>
@@ -587,7 +606,7 @@ rK/4\)</span></li>
 <span>                     labels <span class="op">=</span> <span class="va">BioprodNamibianHake</span><span class="op">$</span><span class="va">Year</span>, </span>
 <span>                     guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/guide_axis.html" class="external-link">guide_axis</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Removed 163 rows containing non-finite values (stat_boxplot).</span></span>
+<span><span class="co">#&gt; Warning: Removed 197 rows containing non-finite values (stat_boxplot).</span></span>
 <span><span class="co">#&gt; Warning: Removed 1 row(s) containing missing values (geom_path).</span></span></code></pre></div>
 <p><img src="namibian-hake-biomass-production_files/figure-html/unnamed-chunk-5-1.png" width="700" style="display: block; margin: auto;"></p>
 <p>Forecasting the biomass for years 1989 to 1993</p>
@@ -621,7 +640,7 @@ rK/4\)</span></li>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_discrete.html" class="external-link">scale_x_discrete</a></span><span class="op">(</span> guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/guide_axis.html" class="external-link">guide_axis</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"white"</span>, <span class="st">"gray90"</span>, <span class="st">"gray50"</span><span class="op">)</span><span class="op">)</span><span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Removed 3161 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
+<span><span class="co">#&gt; Warning: Removed 3541 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
 <p><img src="namibian-hake-biomass-production_files/figure-html/unnamed-chunk-6-1.png" width="700" style="display: block; margin: auto;"></p>
 <div class="section level4">
 <h4 id="comparing-schaefer-type-versus-fox-type-prodcution-function">Comparing Schaefer-type versus Fox-type prodcution function<a class="anchor" aria-label="anchor" href="#comparing-schaefer-type-versus-fox-type-prodcution-function"></a>
@@ -703,6 +722,27 @@ B_{MSY} = K \times e^{-1}
 <code class="sourceCode R"><span><span class="va">model_name</span> <span class="op">&lt;-</span><span class="st">"BiomProd_NamibianHake_fox"</span></span>
 <span><span class="va">sm_fox</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mc-stan.org/rstan/reference/stan_model.html" class="external-link">stan_model</a></span><span class="op">(</span>model_code <span class="op">=</span>  <span class="va">stan_model_fox</span>,</span>
 <span>                 model_name <span class="op">=</span>  <span class="va">model_name</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Trying to compile a simple C file</span></span>
+<span><span class="co">#&gt; Running /usr/lib/R/bin/R CMD SHLIB foo.c</span></span>
+<span><span class="co">#&gt; gcc -I"/usr/share/R/include" -DNDEBUG   -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/Rcpp/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/unsupported"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/BH/include" -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/src/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppParallel/include/"  -I"/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/rstan/include" -DEIGEN_NO_DEBUG  -DBOOST_DISABLE_ASSERTS  -DBOOST_PENDING_INTEGER_LOG2_HPP  -DSTAN_THREADS  -DBOOST_NO_AUTO_PTR  -include '/home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp'  -D_REENTRANT -DRCPP_PARALLEL_USE_TBB=1      -fpic  -g -O2 -fdebug-prefix-map=/build/r-base-zYgbYq/r-base-4.2.1=. -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2  -c foo.c -o foo.o</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:88,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:1: error: unknown type name ‘namespace’</span></span>
+<span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
+<span><span class="co">#&gt;       | ^~~~~~~~~</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/src/Core/util/Macros.h:628:17: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘{’ token</span></span>
+<span><span class="co">#&gt;   628 | namespace Eigen {</span></span>
+<span><span class="co">#&gt;       |                 ^</span></span>
+<span><span class="co">#&gt; In file included from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Dense:1,</span></span>
+<span><span class="co">#&gt;                  from /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/StanHeaders/include/stan/math/prim/mat/fun/Eigen.hpp:13,</span></span>
+<span><span class="co">#&gt;                  from &lt;command-line&gt;:</span></span>
+<span><span class="co">#&gt; /home/chabertliddell/R/x86_64-pc-linux-gnu-library/4.2/RcppEigen/include/Eigen/Core:96:10: fatal error: complex: No such file or directory</span></span>
+<span><span class="co">#&gt;    96 | #include &lt;complex&gt;</span></span>
+<span><span class="co">#&gt;       |          ^~~~~~~~~</span></span>
+<span><span class="co">#&gt; compilation terminated.</span></span>
+<span><span class="co">#&gt; make: *** [/usr/lib/R/etc/Makeconf:168: foo.o] Error 1</span></span>
 <span></span>
 <span><span class="va">fit_fox</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mc-stan.org/rstan/reference/stanmodel-method-sampling.html" class="external-link">sampling</a></span><span class="op">(</span>object <span class="op">=</span> <span class="va">sm_fox</span>,</span>
 <span>                data <span class="op">=</span> <span class="va">dat_list</span>, </span>
@@ -718,8 +758,8 @@ B_{MSY} = K \times e^{-1}
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake_fox' NOW (CHAIN 1).</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
-<span><span class="co">#&gt; Chain 1: Gradient evaluation took 3.2e-05 seconds</span></span>
-<span><span class="co">#&gt; Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.32 seconds.</span></span>
+<span><span class="co">#&gt; Chain 1: Gradient evaluation took 2.8e-05 seconds</span></span>
+<span><span class="co">#&gt; Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.28 seconds.</span></span>
 <span><span class="co">#&gt; Chain 1: Adjust your expectations accordingly!</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
@@ -736,15 +776,15 @@ B_{MSY} = K \times e^{-1}
 <span><span class="co">#&gt; Chain 1: Iteration: 4500 / 5000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 1: Iteration: 5000 / 5000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
-<span><span class="co">#&gt; Chain 1:  Elapsed Time: 3.02093 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 1:                4.20064 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 1:                7.22157 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 1:  Elapsed Time: 3.20107 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 1:                3.73471 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 1:                6.93578 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 1: </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake_fox' NOW (CHAIN 2).</span></span>
 <span><span class="co">#&gt; Chain 2: </span></span>
-<span><span class="co">#&gt; Chain 2: Gradient evaluation took 2.3e-05 seconds</span></span>
-<span><span class="co">#&gt; Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.23 seconds.</span></span>
+<span><span class="co">#&gt; Chain 2: Gradient evaluation took 1.8e-05 seconds</span></span>
+<span><span class="co">#&gt; Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.18 seconds.</span></span>
 <span><span class="co">#&gt; Chain 2: Adjust your expectations accordingly!</span></span>
 <span><span class="co">#&gt; Chain 2: </span></span>
 <span><span class="co">#&gt; Chain 2: </span></span>
@@ -761,15 +801,15 @@ B_{MSY} = K \times e^{-1}
 <span><span class="co">#&gt; Chain 2: Iteration: 4500 / 5000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 2: Iteration: 5000 / 5000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 2: </span></span>
-<span><span class="co">#&gt; Chain 2:  Elapsed Time: 3.22891 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 2:                5.35699 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 2:                8.5859 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 2:  Elapsed Time: 3.2095 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 2:                3.54702 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 2:                6.75653 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 2: </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake_fox' NOW (CHAIN 3).</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
-<span><span class="co">#&gt; Chain 3: Gradient evaluation took 2.4e-05 seconds</span></span>
-<span><span class="co">#&gt; Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.24 seconds.</span></span>
+<span><span class="co">#&gt; Chain 3: Gradient evaluation took 1.7e-05 seconds</span></span>
+<span><span class="co">#&gt; Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.17 seconds.</span></span>
 <span><span class="co">#&gt; Chain 3: Adjust your expectations accordingly!</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
@@ -786,15 +826,15 @@ B_{MSY} = K \times e^{-1}
 <span><span class="co">#&gt; Chain 3: Iteration: 4500 / 5000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 3: Iteration: 5000 / 5000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
-<span><span class="co">#&gt; Chain 3:  Elapsed Time: 3.0416 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 3:                4.43131 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 3:                7.47291 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 3:  Elapsed Time: 4.82213 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 3:                3.37023 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 3:                8.19236 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 3: </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; SAMPLING FOR MODEL 'BiomProd_NamibianHake_fox' NOW (CHAIN 4).</span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
-<span><span class="co">#&gt; Chain 4: Gradient evaluation took 2.1e-05 seconds</span></span>
-<span><span class="co">#&gt; Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.21 seconds.</span></span>
+<span><span class="co">#&gt; Chain 4: Gradient evaluation took 1.8e-05 seconds</span></span>
+<span><span class="co">#&gt; Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.18 seconds.</span></span>
 <span><span class="co">#&gt; Chain 4: Adjust your expectations accordingly!</span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
@@ -811,16 +851,22 @@ B_{MSY} = K \times e^{-1}
 <span><span class="co">#&gt; Chain 4: Iteration: 4500 / 5000 [ 90%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 4: Iteration: 5000 / 5000 [100%]  (Sampling)</span></span>
 <span><span class="co">#&gt; Chain 4: </span></span>
-<span><span class="co">#&gt; Chain 4:  Elapsed Time: 4.11373 seconds (Warm-up)</span></span>
-<span><span class="co">#&gt; Chain 4:                6.24256 seconds (Sampling)</span></span>
-<span><span class="co">#&gt; Chain 4:                10.3563 seconds (Total)</span></span>
+<span><span class="co">#&gt; Chain 4:  Elapsed Time: 2.824 seconds (Warm-up)</span></span>
+<span><span class="co">#&gt; Chain 4:                2.90512 seconds (Sampling)</span></span>
+<span><span class="co">#&gt; Chain 4:                5.72912 seconds (Total)</span></span>
 <span><span class="co">#&gt; Chain 4:</span></span>
 <span><span class="co">#&gt; Warning in validityMethod(object): The following variables have undefined</span></span>
 <span><span class="co">#&gt; values: B_pred100[3],The following variables have undefined values:</span></span>
 <span><span class="co">#&gt; B_pred100[4],The following variables have undefined values: B_pred100[5],The</span></span>
-<span><span class="co">#&gt; following variables have undefined values: B_pred500[3],The following variables</span></span>
-<span><span class="co">#&gt; have undefined values: B_pred500[4],The following variables have undefined</span></span>
-<span><span class="co">#&gt; values: B_pred500[5]. Many subsequent functions will not work correctly.</span></span></code></pre></div>
+<span><span class="co">#&gt; following variables have undefined values: B_pred500[3],The following</span></span>
+<span><span class="co">#&gt; variables have undefined values: B_pred500[4],The following variables have</span></span>
+<span><span class="co">#&gt; undefined values: B_pred500[5],The following variables have undefined values:</span></span>
+<span><span class="co">#&gt; B_pred100[2],The following variables have undefined values: B_pred500[2]. Many</span></span>
+<span><span class="co">#&gt; subsequent functions will not work correctly.</span></span>
+<span><span class="co">#&gt; Warning: There were 28 divergent transitions after warmup. See</span></span>
+<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup</span></span>
+<span><span class="co">#&gt; to find out why this is a problem and how to eliminate them.</span></span>
+<span><span class="co">#&gt; Warning: Examine the pairs() plot to diagnose sampling problems</span></span></code></pre></div>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pars</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"q"</span>, <span class="st">"K"</span>, <span class="st">"r"</span>, <span class="st">"sig"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://mc-stan.org/rstan/reference/stan_plot_diagnostics.html" class="external-link">stan_rhat</a></span><span class="op">(</span><span class="va">fit_fox</span><span class="op">)</span></span>
@@ -863,7 +909,7 @@ B_{MSY} = K \times e^{-1}
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_discrete.html" class="external-link">scale_x_discrete</a></span><span class="op">(</span> guide <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/guide_axis.html" class="external-link">guide_axis</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">90</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gray90"</span>, <span class="st">"gray50"</span><span class="op">)</span><span class="op">)</span><span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_classic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Removed 2858 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
+<span><span class="co">#&gt; Warning: Removed 3214 rows containing non-finite values (stat_boxplot).</span></span></code></pre></div>
 <p><img src="namibian-hake-biomass-production_files/figure-html/compare-1.png" width="700" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df_w</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>C_MSY <span class="op">=</span> <span class="va">r</span><span class="op">*</span><span class="va">K</span><span class="op">/</span><span class="fl">4</span>,</span>
@@ -901,8 +947,8 @@ model:</p>
 <th align="right">Depletion (500K scenario)</th>
 </tr></thead>
 <tbody><tr class="odd">
-<td align="right">0.095875</td>
-<td align="right">0.96875</td>
+<td align="right">0.1185</td>
+<td align="right">0.967375</td>
 </tr></tbody>
 </table>
 <p>Under the Fox production model:</p>
@@ -920,8 +966,8 @@ model:</p>
 <th align="right">Depletion (500K scenario)</th>
 </tr></thead>
 <tbody><tr class="odd">
-<td align="right">0.0213</td>
-<td align="right">0.9240765</td>
+<td align="right">0.0197</td>
+<td align="right">0.9264136</td>
 </tr></tbody>
 </table>
 </div>

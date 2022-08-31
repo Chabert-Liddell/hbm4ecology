@@ -350,10 +350,9 @@ data_stan <-
     # marked and released
     mad = c(93, 12, 183, 199, 7, 44, 20, 81, 18, 102, 55, 34, 30, 148, 53, 159),
     # recaptured marked
-    rmad = c(5, 2, 12, 56, 2, 23, 4, 4, 1, 39, 25, 12, 6, 13, 4, 31),
+    rmad =  c(5,    2,    12,    56,  2,  23, 4,   4,   1, 39, 25, 12,  6, 13, 4,    31),
     # recaptured unmarked
-    r_unm = c(4+3, 22,  0+12,  0+12, 15,  1+4,  5,  3+2,  4+2,  7, 57,  3, 30, 22, 33,  4+4),
-
+    r_unm = c(4+3, 22,  0+12,  0+12, 15, 1+4, 5, 3+2, 4+2,  7, 57,  3, 30, 22, 33,  4+4),
     # Demographic structure
     # adults examined for ageing (could be smaller than c_Sp)
     sample_Sp_age = c(111, 16, 197, 220, 9, 41, 28, 98, 29, 108, 60, 52, 28, 140, 51, 140),
@@ -391,16 +390,70 @@ library(cmdstanr)
 check_cmdstan_toolchain(fix = TRUE, quiet = TRUE)
 set_cmdstan_path(path = "~/cmdstan/")
 t0s <- Sys.time()
-mod <- cmdstan_model("./life_cycle.stan")
+mod <- cmdstan_model("./dev/life_cycle.stan")
 t1s <- Sys.time()
-fit <- mod2$sample(data = data_no_na,
+t2s <- Sys.time()
+fit <- mod$sample(data = data_stan,
                   seed = 1234,
                   chains=1,
                   thin = 1,
                   iter_warmup = 10000,
-                  iter_sampling = 90000,
-                  init = lapply(seq(4), function(i) init_param))
-
-t2s <- Sys.time()
-
+                  iter_sampling = 90000#,
+                  #init = init_param
+                  )
 t3s <- Sys.time()
+
+saveRDS(list(t0s, t1s, t2s, t3s, fit), "./dev/save_stan.rds")
+################################################################################
+# Analyse de l'ess
+################################################################################
+
+results <- list()
+
+samples <- cbind( matrix( save_jags[[5]]$theta_m1[1,,1], ncol=1 ),
+                  matrix(  save_jags[[5]]$s01[1,,1], ncol=1 ),
+                  matrix(  save_jags[[5]]$s12[1,,1], ncol=1 ),
+                  matrix(  save_jags[[5]]$alpha[1,,1], ncol=1 ),
+                  matrix(  save_jags[[5]]$beta[1,,1], ncol=1 ),
+                  matrix(  save_jags[[5]]$sigma_2[1,,1], ncol=1 ),
+                  matrix(  save_jags[[5]]$delta_ss1[1,,1], ncol=1 ),
+                  matrix(  save_jags[[5]]$ss2[1,,1], ncol=1 ))
+#dfw <- extract_wider(posterior_sample)
+colnames( samples ) <- c("theta_m1",
+                         "gamma_0p",
+                         "gamma_Res",
+                         "alpha",
+                         "beta",
+                         "sigma2",
+                         "delta_gamma",
+                         "gamma_Parr1")
+shinystan.obj <- shinystan::as.shinystan( list( samples ) )
+# retrieve effective sample size (ESS)
+( ESS <- shinystan::retrieve( shinystan.obj, "ess" ) )
+ESS/as.numeric(difftime(save_jags[[4]], save_jags[[3]], units = "secs"))
+ESS/as.numeric(difftime(save_jags[[4]], save_jags[[2]], units = "secs"))
+ESS/as.numeric(difftime(save_jags[[4]], save_jags[[1]], units = "secs"))
+results$lifecycle$jags <- list(ESS/as.numeric(difftime(save_jags[[4]], save_jags[[3]], units = "secs")),
+                               ESS/as.numeric(difftime(save_jags[[4]], save_jags[[2]], units = "secs")),
+                               ESS/as.numeric(difftime(save_jags[[4]], save_jags[[1]], units = "secs")))
+
+
+summary <- fit$cmdstan_summary()
+stanfit <- rstan::read_stan_csv(fit$output_files())
+
+
+stan_hierfit_sso <- shinystan::as.shinystan(stanfit)
+ESS.stan <- stan_hierfit_sso@summary[, "n_eff"]
+( ESS.stan <- shinystan::retrieve( stan_hierfit_sso, "ess",
+                        pars = c("alpha", "beta", "sigma2",
+                                 "delta_gamma", "theta_m1", "gamma_Res", "gamma_0p",
+                                 "gamma_Parr1") ))
+ESS.stan/rstan::get_elapsed_time(stanfit)[,2]
+ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs"))
+ESS.stan/(as.numeric(difftime(t3s, t2s, units = "secs")) + as.numeric(difftime(t1s, t0s, units = "secs")))
+
+results$lifecycle$stan <- list(ESS.stan/(as.numeric(difftime(t3s, t2s, units = "secs")) + as.numeric(difftime(t1s, t0s, units = "secs"))),
+                               ESS.stan/as.numeric(difftime(t3s, t2s, units = "secs")),
+                               ESS.stan/rstan::get_elapsed_time(stanfit)[,2])
+
+saveRDS(results, "./dev/res_lifecycle.rds")
